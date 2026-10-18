@@ -1,0 +1,22 @@
+{
+  "name": "norsk-tale",
+  "version": "0.1.0",
+  "description": "Lokal norsk tale-til-tekst i promptboksen via NORSKRIBER (whisper.cpp + NB-Whisper). Lyden forlater ikke maskinen.",
+  "author": { "name": "Eirik Botten Nicolaysen", "email": "eirik@ecodeco.no" },
+  "license": "Apache-2.0",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "norskriber": {
+      "type": "string",
+      "title": "NORSKRIBER-katalog",
+      "description": "Katalogen som holder kjerne.py og modell.lock.json.",
+      "default": "~/norskriber"
+    },
+    "python": {
+      "type": "string",
+      "title": "Python",
+      "description": "Python 3-tolken som kjører lytteren.",
+      "default": "python3"
+    }
+  }
+}

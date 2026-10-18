@@ -1,0 +1,21 @@
+# Ingen vekter, ingen lyd, ingen transkripsjoner i repoet.
+*.bin
+*.gguf
+*.wav
+*.m4a
+*.mp3
+*.flac
+*.ogg
+*.opus
+*.caf
+*.aiff
+transkripsjon_*
+
+# Skrevet av motoren ved lasting
+.claude-plugin/types/
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+node_modules/
