@@ -20,6 +20,8 @@ Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring.
   Resten av Claude Codes miljø (også eventuelle nøkler) når ikke serveren, ffmpeg
   eller whisper. `.mcp.json` sender fortsatt bare de fem `NORSK_TALE_VALGT_*`-verdiene
   fra `${user_config.*}`.
+- README lenker til Nasjonalbibliotekets leverandørliste for NB-Whisper
+  (`NbAiLab/nostram`, `leverandorer.md`), der norsk-tale er oppført.
 - README har fått seksjonen «Til katalogens vurderere», som svarer på hvert funn med
   fil og linje.
 - `docs/UTVIKLING.md` nevner ikke lenger stien til Claude Codes konfigurasjonsfil,

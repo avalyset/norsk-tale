@@ -8,6 +8,8 @@ gjøres av [NB-Whisper](https://huggingface.co/NbAiLab/nb-whisper-large) fra
 Nasjonalbiblioteket, kjørt med [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
 på din egen maskin. Lyden forlater ikke maskinen.
 
+Oppført på Nasjonalbibliotekets leverandørliste for NB-Whisper: https://github.com/NbAiLab/nostram/blob/main/leverandorer.md
+
 Pluginen har fire deler:
 
 - **Knappen og `/norsk`** (en mod) for diktering inn i promptboksen.
