@@ -14,9 +14,12 @@ Pluginen har tre deler:
   vokabular som whisper-prompt, og en fasittabell som retter kjente feilstavinger av
   etater uten å bruke noen språkmodell.
 
+Versjon 0.1.0 (2026-10-19). Endringer står i [CHANGELOG.md](CHANGELOG.md), og
+beslutningene med begrunnelse i [docs/decisions/](docs/decisions/).
+
 ## Krav
 
-- Claude Code v2.1.287 eller nyere (testet med 2.1.299)
+- Claude Code v2.1.287 eller nyere (testet med 2.1.303)
 - Python 3 og ffmpeg på PATH
 - whisper.cpp med `whisper-cli`. `whisper-server` er valgfri: med den holdes modellen
   lastet mellom opptakene, uten den lastes modellen for hvert opptak
@@ -24,7 +27,7 @@ Pluginen har tre deler:
 
 | Plattform | Status |
 |---|---|
-| macOS | Utviklet på macOS 27.0.1, Apple M1 Pro, Python 3.14.8, ffmpeg 9.0.1 og whisper.cpp 1.9.2 bygget fra kilde. Installasjon, `/norsk oppsett` og knappen er prøvd i en ny økt. Transkripsjon er prøvd med opptak spilt av som mikrofon. **Ekte mikrofon er ikke testet ennå.** |
+| macOS | Utviklet på macOS 27.0.1, Apple M1 Pro, Python 3.14.8, ffmpeg 9.0.1 og whisper.cpp 1.9.2 bygget fra kilde (Metal). Livetest 2026-10-19 i Claude Code 2.1.303: en ekte FLEURS-ytring ble spilt gjennom høyttaleren inn i mikrofonen, dikteringen ble startet med snarveien, teksten kom inn riktig, og Angre virket. **Opplesning av et menneske i sanntid er ikke testet automatisk.** |
 | whisper.cpp fra Homebrew | Ikke testet. Formelen (1.9.5 da dette ble skrevet) bygger ikke `whisper-server`, så dikteringen bruker `whisper-cli` og laster modellen for hvert opptak |
 | Windows, Linux | Ikke testet |
 
@@ -70,14 +73,14 @@ Innstillingene finnes i `/config` under pluginen:
 ### Modell og opptak på et eksternt volum
 
 Modell, datasett og opptak kan ligge på en ekstern disk, for eksempel
-`/Volumes/Vault/norsk-tale/`. Pek `modell` og `opptak` (eller `NORSK_TALE_MODELL`
+`/Volumes/Ekstern/norsk-tale/`. Pek `modell` og `opptak` (eller `NORSK_TALE_MODELL`
 og `NORSK_TALE_OPPTAK`) dit. Er disken ikke montert, får du en tydelig feilmelding,
 og ingenting skrives til intern disk i stedet.
 
 `kalibrering/vakt.py` kjører tunge jobber (for eksempel whisper på CPU) med
 `nice -n 19`. Den avbryter jobben i tre tilfeller:
 
-- ledig minne faller under 20 %, målt med `memory_pressure -Q` som norregels minnevakt
+- ledig minne faller under 20 %, målt med `memory_pressure -Q` (feltet «free percentage»)
 - brukt swap øker mer enn 1 GB fra kjøringen startet
 - intern disk har mindre enn 10 GiB ledig
 
@@ -91,21 +94,22 @@ medium og large på CPU. whisper.cpp skrev da nynorske former («sjå», «ein»
 «Det er ikke sikkert …» med `nb` ble «Det er sikkert …» med `nn`.
 
 Dette er én observasjon i ett klipp, ikke en måling av hvor ofte det skjer.
-Standard målform er `nb`. Standardkalibreringen skal måle målformkryss og tapte
-nektelser på etablerte testsett.
+Standard målform er `nb` ([NTA-0005](docs/decisions/NTA-0005-nb-som-standard.md)).
+Målformkrysset er preregistrert i standardkalibreringen, men ligger i fase 2 og
+er ikke kjørt.
 
 ### Modellvalg og minnebruk
 
 | Modell | Filstørrelse (HF) | Målt toppminne |
 |---|---|---|
-| large | 3,10 GB | ca. 4,1 GB (`whisper-cli`, 42 s talememo, M1 Pro; `whisper-server` ikke målt separat) |
+| large | 3,10 GB | ca. 4,1 GB (`whisper-cli`, 42 s opptak, M1 Pro; `whisper-server` ikke målt separat) |
 | medium | 1,53 GB | ikke målt |
 | small | 0,49 GB | ikke målt |
 
 Med `whisper-server` lastes modellen ved første trykk og frigjøres etter 10
 minutter uten bruk. `/norsk av` frigjør den med en gang. Uten `whisper-server`
-lastes modellen for hvert opptak og frigjøres så snart teksten er klar. Kvaliteten til medium og small på norsk er ikke
-målt i dette prosjektet.
+lastes modellen for hvert opptak og frigjøres så snart teksten er klar. Large og
+medium er målt på FLEURS (se under). Small er ikke målt.
 
 ### Mikrofontillatelse
 
@@ -113,6 +117,45 @@ macOS spør om mikrofontilgang for appen som kjører Claude Code: Terminal, iTer
 eller Claude. Har du sagt nei, gir du tilgang under Systeminnstillinger →
 Personvern og sikkerhet → Mikrofon, og starter appen på nytt. Gir mikrofonen bare
 null-signal i ett sekund, sier norsk-tale fra og ber deg sjekke tilgangen.
+
+## Målt kvalitet: standardkalibrering, fase 1
+
+Standardkalibreringen ble preregistrert før kjøring, på OSF som
+[rtbkz](https://osf.io/rtbkz/) med embargo til 2027-04-19, og som git-taggen
+`prereg-v1`. Den ble så delt i to faser (`kalibrering/AVVIK.md` nr. 1). Koden som
+kjørte og kan gjenskape fase 1, er versjon `v0.1.0` (kommandoen står i AVVIK nr. 2).
+Fase 1 er kjørt med kjeden slik den leveres: whisper.cpp med NB-Whisper ggml på Metal, beam
+5, én prosess per ytring. Tallene er ordfeilrate (WER) i prosent med 95 %
+konfidensintervall, og står i sin helhet i
+[`kalibrering/resultater/prereg-v1-fase1.md`](kalibrering/resultater/prereg-v1-fase1.md).
+
+**FLEURS nb_no, test (357 ytringer), målform nb, rå tekst:**
+
+| Modell | Prompt av | Prompt på | NB-Whisper publisert (tabell 5) |
+|---|---|---|---|
+| medium | 6,76 [5,96–7,60] | 6,53 [5,78–7,35] | 7,2 |
+| large | 5,26 [4,64–5,92] | 5,34 [4,72–5,98] | 6,6 |
+
+**NB Tale, modul 1 (480 ytringer fra 72 testtalere i 12 dialektgrupper), large, nb,
+prompt på:** 9,37 [8,14–10,74]. Tallene per dialektgruppe står i rapporten.
+
+- **Nektelser:** referansene i FLEURS har 77. Medium mistet 2 i begge
+  prompt-cellene, large mistet ingen. I NB Tale ble ingen av 29 nektelser borte.
+- **Korrektoren** ga 0 treff i FLEURS og NB Tale, så rå og korrigert tekst er like.
+  Fasittabellen retter bare 13 kjente feilformer av navn, og ingen av dem forekom.
+
+**Tallene kan ikke sammenlignes direkte med NB-Whispers publiserte tall:**
+
+- NB kjørte HF transformers/JAX med full presisjon. Her er det whisper.cpp ggml
+  med Metal.
+- At normaliseringen er den samme (små bokstaver og tegnsetting fjernet,
+  NbAiLab/nostram), er sannsynlig, men ikke dokumentert.
+- Det er ikke dokumentert hvilket FLEURS-felt NB brukte som fasit. Her brukes
+  `raw_transcription`.
+- Forskjellene forklares bare som hypoteser, ikke som at den ene kjeden er bedre.
+
+Målformkrysset (nb mot nn) og testsettene NST, NPSC og NB Samtale er fase 2 og ikke
+kjørt.
 
 ## Bruk
 
@@ -236,13 +279,17 @@ sammen mange bidrag til tall per klasse, målform og region, med morsmål og imi
 i hver sin kolonne. Den viser antall talere per celle og merker celler med færre
 enn tre talere «for få».
 
-### Kjent begrensning
+## Kjente begrensninger
+
+Chrome spør om mikrofontilgang hver gang `/norsk kalibrer` startes, fordi riggen
+får en tilfeldig port og tillatelsen gjelder per port.
 
 Når samme lyd transkriberes flere ganger mens modellen ligger lastet i
 `whisper-server`, kan teksten variere i enkeltord mellom kallene. Det er målt med
 NORSKRIBER-kjernen som `kjerne/` er kopiert fra, og kan reproduseres i ren
 whisper.cpp. Med samme kjerne ga filbanen (ny prosess per fil, som skillen bruker)
-samme tekst i tre kjøringer av samme fil.
+samme tekst i tre kjøringer av samme fil. Se
+[NTA-0002](docs/decisions/NTA-0002-filbane-og-resident.md).
 
 ## Når innebygd `/voice` er et bedre valg
 
@@ -257,9 +304,9 @@ samme tekst i tre kjøringer av samme fil.
 ## Personvern
 
 Se [PRIVACY.md](PRIVACY.md). Kort sagt samles ingen data inn, lyden forlater ikke
-maskinen, og pluginen gjør ingen nettverkskall under transkripsjon. Den eneste
-forbindelsen er loopback (`127.0.0.1`) til en lokal `whisper-server`, når den
-finnes. Teksten du sender til Claude, går dit som all annen tekst du sender.
+maskinen, og pluginen gjør ingen nettverkskall under transkripsjon. De eneste
+forbindelsene er loopback (`127.0.0.1`): til en lokal `whisper-server` når den
+finnes, og mellom nettleseren og kalibreringsriggen når du bruker `/norsk kalibrer`. Teksten du sender til Claude, går dit som all annen tekst du sender.
 
 ## Utvikling
 
@@ -268,6 +315,8 @@ claude plugin validate --strict .
 claude plugin test .
 python3 -m pytest tests
 ```
+
+Beslutningene står i [docs/decisions/](docs/decisions/) (NTA-0001 til NTA-0006).
 
 Tester som trenger modellen og et ekte opptak, hoppes over med begrunnelse. Da må
 opptaket ligge utenfor repoet:
@@ -302,6 +351,14 @@ DISABLE_AUTOUPDATER=1 claude --plugin-dir .
 ## Kreditering
 
 - NB-Whisper fra Nasjonalbiblioteket, Apache-2.0. Vektene følger ikke med.
+  Kummervold mfl. (2024), «Whispering in Norwegian: Navigating Orthographic and
+  Dialectic Challenges», arXiv:2402.01917.
+- «FLEURS: Few-shot Learning Evaluation of Universal Representations of Speech»,
+  Conneau mfl., 2022, Google, https://huggingface.co/datasets/google/fleurs,
+  lisensiert CC-BY-4.0. Bare test-splitten for nb_no er brukt i
+  standardkalibreringen. Ingen lyd eller fulltekst er publisert.
+- NB Tale, NPSC, NST og NB Samtale fra Språkbanken ved Nasjonalbiblioteket, CC0.
+  Datasettene er ikke publisert på nytt.
 - whisper.cpp av Georgi Gerganov og bidragsytere, MIT.
 - Arkitekturen for modden er inspirert av hemanth/voice-mod (MIT). Ingen kode er
   kopiert derfra.

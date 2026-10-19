@@ -18,7 +18,8 @@ Gjelder norsk-tale 0.1.0.
   opptaket er ferdig: ved et nytt trykk, etter 1,5 s stillhet etter tale, eller
   etter 2 minutter.
 - Opptaket skrives til en midlertidig katalog og slettes så snart transkripsjonen
-  er ferdig.
+  er ferdig. Blir prosessen drept midt i en transkripsjon, kan den midlertidige
+  fila bli liggende i `$TMPDIR` til systemet rydder der.
 - Skillen `transkriber` leser bare lydfila du selv peker på. Den lager ingen kopi
   utover midlertidige filer (16 kHz-lyd og råtekst fra whisper) som slettes
   etterpå.
@@ -45,9 +46,12 @@ innstillinger.
   opptakene. Serveren lytter bare på `127.0.0.1`, krever et tilfeldig token og gjør
   ingen utgående nettverkskall. «Eksporter bidrag» lager en fil med bare tall,
   uten lyd og uten tekst, og bare når du ber om det.
-- `/norsk selvtest` lagrer resultatet som `~/norsk-tale-opptak/selvtest-<tidspunkt>.json`:
-  setningene, teksten som ble transkribert, målingene og scoren. Ingen lyd. Fila
-  blir liggende til du sletter den.
+- `/norsk selvtest` lagrer resultatet som `~/norsk-tale-opptak/selvtest-claude-<tidspunkt>.json`:
+  det som sto i promptboksen etter dikteringen, og om Angre virket. Ingen lyd.
+- Fanen «Selvtest» i `/norsk kalibrer` lagrer `selvtest-<tidspunkt>.json` i samme
+  mappe: setningene, teksten som ble transkribert, målingene og scoren. Lyden
+  konverteres i en midlertidig katalog som slettes, og lagres ikke.
+- Filene blir liggende til du sletter dem.
 
 ## Nedlasting
 

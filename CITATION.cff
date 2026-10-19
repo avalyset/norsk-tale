@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: "Hvis du bruker norsk-tale, siter programvaren slik."
+type: software
+title: "norsk-tale: lokal norsk diktering i Claude Code med NB-Whisper og whisper.cpp"
+version: 0.1.0
+date-released: 2026-10-19
+authors:
+  - family-names: "Botten Nicolaysen"
+    given-names: "Eirik"
+    email: "eirik@ecodeco.no"
+    affiliation: "EcoDeco AS"
+license: Apache-2.0
+repository-code: "https://github.com/avalyset/norsk-tale"
+keywords:
+  - norsk
+  - nynorsk
+  - tale-til-tekst
+  - diktering
+  - whisper
+  - nb-whisper
+  - claude-code
+references:
+  - type: article
+    title: "Whispering in Norwegian: Navigating Orthographic and Dialectic Challenges"
+    authors:
+      - family-names: "Kummervold"
+        given-names: "Per E"
+      - family-names: "de la Rosa"
+        given-names: "Javier"
+      - family-names: "Wetjen"
+        given-names: "Freddy"
+      - family-names: "Braaten"
+        given-names: "Rolv-Arild"
+      - family-names: "Solberg"
+        given-names: "Per Erik"
+    year: 2024
+    identifiers:
+      - type: other
+        value: "arXiv:2402.01917"
+    notes: "NB-Whisper, Nasjonalbiblioteket, Apache-2.0."
+  - type: article
+    title: "FLEURS: Few-shot Learning Evaluation of Universal Representations of Speech"
+    authors:
+      - family-names: "Conneau"
+        given-names: "Alexis"
+      - name: "et al."
+    year: 2022
+    url: "https://huggingface.co/datasets/google/fleurs"
+    notes: "Testsplitten for nb_no er brukt i standardkalibreringen. CC-BY-4.0."
