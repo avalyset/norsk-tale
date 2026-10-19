@@ -38,10 +38,20 @@
   td.bom { color: var(--rod); }
   pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; max-height: 360px; overflow: auto; background: var(--bg); padding: 10px; border-radius: 8px; }
   .skjult { display: none; }
+  [hidden] { display: none !important; }
+  .vakt { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
 </style>
 </head>
 <body>
-<main>
+<!-- Standard er feilmeldingen. Appen under er skjult til skriptet har sett at
+     siden kommer fra riggens egen adresse med token. En side åpnet som fil, eller
+     vist uten JavaScript, viser derfor bare meldingen. -->
+<div id="ikkeServert" class="vakt">
+  <h1>Kalibrer for din stemme</h1>
+  <p class="feil"><b id="vaktMelding">Denne siden kan ikke åpnes som fil. Den må åpnes av kalibreringsriggen.</b></p>
+  <p>Start riggen fra Claude Code med <code>/norsk kalibrer</code>. Den åpner riktig adresse i nettleseren.</p>
+</div>
+<main id="app" hidden>
   <h1>Kalibrer for din stemme</h1>
   <p class="dim">norsk-tale måler hvordan dikteringen virker for <b>deg</b> og <b>din mikrofon</b>. Dette er et brukerverktøy, ikke en benchmark.</p>
 
@@ -341,21 +351,18 @@ $("slett").onclick = async () => {
 };
 $("avslutt").onclick = async () => {
   await post("avslutt"); if (strom) strom.getTracks().forEach(t => t.stop());
-  document.body.innerHTML = "<main><h1>Riggen er avsluttet.</h1><p>Du kan lukke fanen. Start igjen med /norsk kalibrer.</p></main>";
+  document.body.innerHTML = "<div class=\"vakt\"><h1>Riggen er avsluttet.</h1><p>Du kan lukke fanen. Start igjen med /norsk kalibrer.</p></div>";
 };
 
-// Siden virker bare når riggen serverer den. Åpnet som fil, eller uten token,
-// sier den fra i stedet for å feile stille.
-function stopp(melding) {
-  document.querySelector("main").innerHTML = "<h1>Kalibrer for din stemme</h1><p class=\"feil\"><b>" + melding +
-    "</b></p><p>Start riggen fra Claude Code med <code>/norsk kalibrer</code>. Den åpner riktig adresse i nettleseren.</p>";
-}
-// file:, data: og blob: har ingen vert; bare riggens egen adresse har det.
+// Appen vises bare når riggen serverer siden: riktig vert og token i adressen.
+// file:, data: og blob: har ingen vert. Uten JavaScript blir meldingen stående.
 if (location.protocol === "file:" || !location.host) {
-  stopp("Denne siden kan ikke åpnes som fil. Den må åpnes av kalibreringsriggen.");
+  $("vaktMelding").textContent = "Denne siden kan ikke åpnes som fil. Den må åpnes av kalibreringsriggen.";
 } else if (!TOKEN) {
-  stopp("Adressen mangler token. Bruk adressen riggen åpnet, eller den som står over prompten i Claude Code.");
+  $("vaktMelding").textContent = "Adressen mangler token. Bruk adressen riggen åpnet, eller den som står over prompten i Claude Code.";
 } else {
+  $("ikkeServert").hidden = true;
+  $("app").hidden = false;
   lastOppsett().catch(e => { $("topstatus").textContent = "Kunne ikke laste: " + e.message; });
 }
 </script>

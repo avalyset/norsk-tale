@@ -261,12 +261,48 @@ def test_rapport_skiller_malformfeil_fra_horselsfeil(rigg_med_resultat):
     assert "RIFF" not in html and ".wav" not in html
 
 
-def test_siden_avviser_file_og_manglende_token():
-    """Siden sier tydelig fra når den åpnes som fil eller uten token."""
+class _SynligTekst(__import__("html.parser").parser.HTMLParser):
+    """Teksten en nettleser viser uten JavaScript: alt utenfor <script>, <style>
+    og elementer med attributtet hidden."""
+    TOMME = {"meta", "link", "br", "img", "input", "hr", "source"}
+
+    def __init__(self):
+        super().__init__()
+        self.stakk, self.tekst = [], []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.TOMME:
+            return
+        skjult = tag in ("script", "style", "title") or "hidden" in dict(attrs)
+        self.stakk.append(skjult or (self.stakk[-1] if self.stakk else False))
+
+    def handle_endtag(self, tag):
+        if tag not in self.TOMME and self.stakk:
+            self.stakk.pop()
+
+    def handle_data(self, data):
+        if not (self.stakk and self.stakk[-1]) and data.strip():
+            self.tekst.append(data.strip())
+
+
+def test_siden_uten_server_viser_bare_feilmeldingen():
+    """Åpnet som fil (eller vist uten JavaScript, som en statisk forhåndsvisning)
+    skal siden bare vise feilmeldingen, ikke appen."""
+    p = _SynligTekst()
+    p.feed((ROT / "kalibrering" / "side.html").read_text(encoding="utf-8"))
+    synlig = " ".join(p.tekst)
+    assert "kan ikke åpnes som fil" in synlig and "/norsk kalibrer" in synlig
+    for app in ("Start ny runde", "Mikrofonsjekk", "Les inn", "Fullt manus", "Slett alle opptak"):
+        assert app not in synlig, app
+
+
+def test_skriptet_viser_appen_bare_med_vert_og_token():
     html = (ROT / "kalibrering" / "side.html").read_text(encoding="utf-8")
-    assert 'location.protocol === "file:" || !location.host' in html
-    assert "kan ikke åpnes som fil" in html and "mangler token" in html
-    assert '<span id="fulltEtikett">Fullt manus (100 opptak)</span>' in html   # tallet står selv uten JavaScript
+    assert '<main id="app" hidden>' in html
+    assert 'location.protocol === "file:" || !location.host' in html and "mangler token" in html
+    vis = html.index('$("app").hidden = false')
+    assert html.rindex("if (location.protocol", 0, vis) < html.rindex("} else if (!TOKEN)", 0, vis)
+    assert '<span id="fulltEtikett">Fullt manus (100 opptak)</span>' in html
 
 
 def test_rigg_starter_ikke_paa_umontert_volum(tmp_path):
