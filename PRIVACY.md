@@ -1,6 +1,6 @@
 # Personvern
 
-Gjelder norsk-tale 0.2.1.
+Gjelder norsk-tale 0.2.2.
 
 ## Kort
 

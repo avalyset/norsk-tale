@@ -314,10 +314,10 @@ async function folgOpptak($: EngineInterface, etter: number) {
     for (let runde = 0; runde < 12000; runde += 1) {
       await $.clock.sleep(150)
       const st = await kall($, 'status', { etter: nr })
-      for (const h of (st.hendelser as (Hendelse & { nr: number })[])) {
-        nr = h.nr
-        await hendelse($, h)
-        if (SLUTT.has(h.type)) return
+      for (const hd of (st.hendelser as (Hendelse & { nr: number })[])) {
+        nr = hd.nr
+        await hendelse($, hd)
+        if (SLUTT.has(hd.type)) return
       }
     }
   } catch (feil) {

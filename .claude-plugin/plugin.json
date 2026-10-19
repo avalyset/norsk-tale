@@ -1,7 +1,7 @@
 {
   "name": "norsk-tale",
   "displayName": "Norsk tale",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Lokal norsk diktering i Claude Code med NB-Whisper og whisper.cpp. Lyden forlater ikke maskinen.",
   "author": {
     "name": "Eirik Botten Nicolaysen, EcoDeco AS",
