@@ -283,3 +283,21 @@ def test_nynorsk_sendes_som_l_nn_og_verifisert_sha_gjenbrukes(tmp_path, monkeypa
     assert whisper[whisper.index("-l") + 1] == "nn"
     assert lest == []                       # SHA-en var alt verifisert av den som kaller
     assert ut["verbatim"] == "Eg har ikkje fått svar."
+
+
+# ------------------------------------------------------------ eksternt volum
+def test_umontert_volum_stopper_ogsaa_via_symlenke(tmp_path):
+    with pytest.raises(kjerne.KjerneFeil, match="ikke montert"):
+        kjerne.krev_montert("/Volumes/norsk-tale-finnes-ikke/opptak")
+    lenke = tmp_path / "modell.bin"
+    lenke.symlink_to("/Volumes/norsk-tale-finnes-ikke/m.bin")
+    with pytest.raises(kjerne.KjerneFeil, match="ikke montert"):
+        kjerne.verifiser_modell(lenke, "0" * 64)
+    assert kjerne.krev_montert(tmp_path) == pathlib.Path(os.path.realpath(tmp_path))
+
+
+def test_cli_krev_montert(tmp_path):
+    k = [sys.executable, "-I", str(KJERNE / "kjerne.py"), "--krev-montert"]
+    assert subprocess.run([*k, str(tmp_path)]).returncode == 0
+    r = subprocess.run([*k, "/Volumes/norsk-tale-finnes-ikke/x"], capture_output=True, text=True)
+    assert r.returncode == 5 and "ikke montert" in r.stderr

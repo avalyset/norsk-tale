@@ -10,7 +10,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { NorskAngre, NorskSelvtest, NorskStatus } from '../types'
 import {
-  PANE, aktivTest, avslutt, etterAngre, etterInnsetting, oppsummer, startSelvtest, tabell,
+  PANE, aktivTest, avslutt, etterAngre, etterInnsetting, opptaksmappe, oppsummer, settOpptaksmappe, startSelvtest, tabell,
 } from './selvtest'
 
 const status = atom({ plugin: 'norsk-tale', key: 'status' } as const, 'av' as NorskStatus)
@@ -255,7 +255,7 @@ async function startRigg($: EngineInterface): Promise<string> {
   }
   riggLever = true
   const argv = ['python3', '-I', `${$.plugin.root}/kalibrering/rigg.py`,
-    '--modellvalg', modellvalg, '--modell', modell, '--whisper', whisper]
+    '--modellvalg', modellvalg, '--modell', modell, '--whisper', whisper, '--opptak', await opptaksmappe($)]
   void (async () => {
     let rest = ''
     try {
@@ -269,6 +269,9 @@ async function startRigg($: EngineInterface): Promise<string> {
           i = rest.indexOf('\n')
           let h: { type?: string; url?: string } = {}
           try { h = JSON.parse(linje) } catch { continue }
+          if (h.type === 'feil') {
+            await sett($, 'feil', `Kalibreringsriggen startet ikke: ${(h as { melding?: string }).melding ?? 'ukjent feil'}`)
+          }
           if (h.type === 'klar' && h.url) {
             const url = h.url
             await update($, rigg, () => url)
@@ -305,6 +308,7 @@ export const register: Register = (on, options) => {
   modell = String(options.modell ?? '')
   whisper = String(options.whisper ?? '')
   malform = String(options.malform ?? 'nb')
+  settOpptaksmappe(String(options.opptak ?? ''))
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -399,7 +403,7 @@ export const register: Register = (on, options) => {
     } else {
       const o = oppsummer(st)
       tekst1 = `Selvtest ${st.avbrutt ? 'avbrutt' : 'ferdig'}: ${o.bestatt} av ${o.sjekker} sjekker bestått${o.funn.length ? `, ${o.funn.length} funn` : ''}.`
-      tekst2 = `Detaljer i panelet «norsk-tale selvtest». Lagret: ${st.fil ?? '–'}`
+      tekst2 = st.fil ? `Detaljer i panelet «norsk-tale selvtest». Lagret: ${st.fil}` : `Resultatet ble ikke lagret: ${st.lagringsfeil ?? 'ukjent'}`
     }
     return (
       <Box flexDirection="column">

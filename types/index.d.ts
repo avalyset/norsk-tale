@@ -40,6 +40,7 @@ export type NorskSelvtest = {
   angre: { ok: boolean; forventet: string; faktisk: string } | null
   fil: string | null
   avbrutt: boolean
+  lagringsfeil: string | null
 }
 
 declare module 'claude-code' {

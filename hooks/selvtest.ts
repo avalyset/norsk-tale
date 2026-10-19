@@ -44,7 +44,7 @@ export async function startSelvtest($: EngineInterface): Promise<string> {
   const setninger = lesSetninger(await $.fs.read(`${$.plugin.root}/selvtest/setninger.tsv`))
   if (setninger.length === 0) return 'Fant ingen setninger i selvtest/setninger.tsv.'
   await update($, selvtest, () => ({
-    aktiv: true, steg: 1, setninger, resultater: [], angre: null, fil: null, avbrutt: false,
+    aktiv: true, steg: 1, setninger, resultater: [], angre: null, fil: null, avbrutt: false, lagringsfeil: null,
   }))
   await forbered($, 1)
   return `Selvtest startet: ${setninger.length} setninger. Trykk 🎙 Norsk og les setningen over prompten. `
@@ -99,23 +99,46 @@ export async function etterAngre($: EngineInterface): Promise<boolean> {
   return true
 }
 
+// Opptaksmappa: userConfig «opptak», ellers NORSK_TALE_OPPTAK, ellers ~/norsk-tale-opptak.
+let opptakValg = ''
+export function settOpptaksmappe(v: string) { opptakValg = v }
+
+export async function opptaksmappe($: EngineInterface): Promise<string> {
+  const home = (await $.env.get('HOME')) ?? ''
+  const valgt = opptakValg || (await $.env.get('NORSK_TALE_OPPTAK')) || `${home}/norsk-tale-opptak`
+  return valgt.startsWith('~/') ? home + valgt.slice(1) : valgt
+}
+
+// Et eksternt volum som ikke er montert, skal stoppe skrivingen: $.fs.write ville
+// ellers opprettet mappa under /Volumes på intern disk.
+async function montert($: EngineInterface, mappe: string): Promise<string | null> {
+  try {
+    const r = await $.process.run(['python3', '-I', `${$.plugin.root}/kjerne/kjerne.py`, '--krev-montert', mappe], { timeoutMs: 15000 })
+    return r.exitCode === 0 ? null : (r.stderr.trim() || 'Opptaksmappa er ikke tilgjengelig.')
+  } catch (feil) {
+    return `Kunne ikke sjekke opptaksmappa: ${String(feil)}`
+  }
+}
+
 export async function avslutt($: EngineInterface, avbrutt: boolean): Promise<string> {
   const st = await read($, selvtest)
   if (!st) return 'Ingen selvtest å avslutte.'
   await $.prompt.fill({ text: '', mode: 'replace' })
-  const home = (await $.env.get('HOME')) ?? '~'
+  const mappe = await opptaksmappe($)
   const stempel = new Date(await $.clock.now()).toISOString().replace(/[:]/g, '').replace(/\..*$/, '')
-  const fil = `${home}/norsk-tale-opptak/selvtest-${stempel}.json`
-  const ferdig: NorskSelvtest = { ...st, aktiv: false, avbrutt, fil }
+  const lagringsfeil = await montert($, mappe)
+  const fil = lagringsfeil ? null : `${mappe}/selvtest-${stempel}.json`
+  const ferdig: NorskSelvtest = { ...st, aktiv: false, avbrutt, fil, lagringsfeil }
   const rapport = {
     norsk_tale_selvtest: 1, tidspunkt: new Date(await $.clock.now()).toISOString(), avbrutt,
     oppsummering: oppsummer(ferdig), resultater: ferdig.resultater, angre: ferdig.angre,
     merknad: 'Ingen lyd er lagret. utdata er det som sto i promptboksen etter prefikset.',
   }
-  await $.fs.write(fil, JSON.stringify(rapport, null, 2) + '\n')
+  if (fil) await $.fs.write(fil, JSON.stringify(rapport, null, 2) + '\n')
   await update($, selvtest, () => ferdig)
   await $.ui.open({ id: PANE, title: 'norsk-tale selvtest' })
-  return avbrutt ? `Selvtesten ble avbrutt. Delresultat: ${fil}` : `Selvtest ferdig. Resultat: ${fil}`
+  const hvor = fil ? `Resultat: ${fil}` : `Resultatet ble IKKE lagret: ${lagringsfeil}`
+  return avbrutt ? `Selvtesten ble avbrutt. ${hvor}` : `Selvtest ferdig. ${hvor}`
 }
 
 export type Oppsummering = { bestatt: number; sjekker: number; funn: string[] }
@@ -170,5 +193,6 @@ export function tabell(st: NorskSelvtest): string[] {
   }
   if (st.angre) ut.push(`Angre ${merke(st.angre.ok)}  forventet «${st.angre.forventet}», fikk «${st.angre.faktisk}»`)
   if (st.fil) ut.push(`Lagret: ${st.fil}`)
+  if (st.lagringsfeil) ut.push(`Ikke lagret: ${st.lagringsfeil}`)
   return ut
 }

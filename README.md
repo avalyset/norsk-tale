@@ -65,6 +65,19 @@ Innstillingene finnes i `/config` under pluginen:
 | `malform` | `nb` | Målformen whisper skal skrive: `nb` (bokmål, `-l no`), `nn` (nynorsk, `-l nn`) eller `auto` (whisper velger språk). Om `-l nn` faktisk gir nynorsk i whisper.cpp, er ikke målt ennå |
 | `modell` | tom | Sti til `ggml-model.bin`. Tom betyr `~/.cache/norsk-tale/nb-whisper-<modellvalg>.bin` |
 | `whisper` | tom | Navn eller sti til `whisper-cli`. Tom betyr `whisper-cli` på PATH. En eventuell `whisper-server` letes etter i samme mappe, eller på PATH når bare navnet er gitt |
+| `opptak` | tom | Mappe for kalibreringsopptak og selvtest-resultater. Tom betyr `NORSK_TALE_OPPTAK`, ellers `~/norsk-tale-opptak`. Ligger mappa på et eksternt volum (`/Volumes/…`) som ikke er montert, stopper norsk-tale i stedet for å skrive til intern disk. Det samme gjelder modellfila, også via symlenke |
+
+### Modell og opptak på et eksternt volum
+
+Modell, datasett og opptak kan ligge på en ekstern disk, for eksempel
+`/Volumes/Vault/norsk-tale/`. Pek `modell` og `opptak` (eller `NORSK_TALE_MODELL`
+og `NORSK_TALE_OPPTAK`) dit. Er disken ikke montert, får du en tydelig feilmelding,
+og ingenting skrives til intern disk i stedet.
+
+`kalibrering/vakt.py` kjører tunge jobber (for eksempel whisper på CPU) med
+`nice -n 19`. Den avbryter jobben når ledig minne faller under 20 %, målt med
+`memory_pressure -Q` som norregels minnevakt, eller når intern disk har mindre enn
+10 GiB ledig. Den sjekker hvert 5. sekund og logger hver sjekk og hvert avbrudd.
 
 ### Modellvalg og minnebruk
 

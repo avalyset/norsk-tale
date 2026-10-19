@@ -41,7 +41,7 @@ const BAND = {
   props: { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 120, scroll: { offset: 0, bodyRows: 6 }, view: {} },
 } as const
 
-const rig = (on: On, startUtkast = '') => {
+const rig = (on: On, startUtkast = '', montert = true) => {
   const boks = { text: startUtkast, cursor: startUtkast.length }
   const fills: { text: string; mode: string }[] = []
   const skrevet: { path: string; text: string }[] = []
@@ -79,6 +79,9 @@ const rig = (on: On, startUtkast = '') => {
     return { value: { code: 0, signal: null } as ProcessSpawnResult }
   })
   on('process.run', ($, e) => {
+    if (e.argv.includes('--krev-montert')) {
+      return { value: { exitCode: montert ? 0 : 5, stdout: '', stderr: montert ? '' : 'norsk-tale: /Volumes/Vault er ikke montert.', isStdoutTruncated: false, isStderrTruncated: false } }
+    }
     const id = e.argv[e.argv.indexOf('--id') + 1] ?? ''
     const stdin = e.init?.stdin ?? ''
     scorekall.push({ id, stdin })
@@ -186,5 +189,15 @@ describe('norsk-tale: /norsk selvtest', () => {
     expect(rapport.avbrutt).toBe(true)
     expect(rapport.resultater.length).toBe(1)
     expect(rec.submits).toEqual([])
+  })
+
+  test('umontert opptaksvolum: ingenting skrives, og det sies tydelig', async ($, on) => {
+    const rec = rig(on, '', false)
+    await kjor($, 'selvtest')
+    const r = await kjor($, 'selvtest avbryt')
+    expect(r.text).toContain('IKKE lagret')
+    expect(r.text).toContain('ikke montert')
+    expect(rec.skrevet.filter(w => w.path.endsWith('.json'))).toEqual([])
+    expect(rec.boks.text).toBe('')
   })
 })

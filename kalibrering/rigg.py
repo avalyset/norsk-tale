@@ -64,7 +64,7 @@ class Feil(Exception):
 
 class Rigg:
     def __init__(self, opptaksrot, konfig, inaktiv_s=1800):
-        self.rot = pathlib.Path(opptaksrot).expanduser()
+        self.rot = kjerne.krev_montert(opptaksrot)
         self.konfig = konfig
         self.manus = score.les_setninger(MANUS)
         self.fasit = {s["id"]: s for s in self.manus}
@@ -451,14 +451,19 @@ def vakt_inaktivitet(server, rigg, intervall=1.0):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="norsk-tale kalibreringsrigg (lokal nettleserserver).")
-    ap.add_argument("--opptak", default="~/norsk-tale-opptak", help="Rotkatalog for runder (utenfor repoet).")
+    ap.add_argument("--opptak", default="", help="Rotkatalog for runder, utenfor repoet. Tom: NORSK_TALE_OPPTAK, "
+                                                 "ellers ~/norsk-tale-opptak. Et umontert volum stopper riggen.")
     ap.add_argument("--modellvalg", default="")
     ap.add_argument("--modell", default="")
     ap.add_argument("--whisper", default="")
     ap.add_argument("--inaktiv-sekunder", type=float, default=1800)
     a = ap.parse_args(argv)
     konfig = {"modellvalg": a.modellvalg or None, "modell": a.modell or None, "whisper": a.whisper or None}
-    rigg = Rigg(a.opptak, konfig, a.inaktiv_sekunder)
+    try:
+        rigg = Rigg(a.opptak or kjerne.standard_opptaksmappe(), konfig, a.inaktiv_sekunder)
+    except kjerne.KjerneFeil as e:
+        print(json.dumps({"type": "feil", "melding": str(e)}, ensure_ascii=False), flush=True)
+        return 5
     rigg.rot.mkdir(parents=True, exist_ok=True)
     Handler.rigg = rigg
     server = Server(("127.0.0.1", 0), Handler)

@@ -135,8 +135,27 @@ def standard_oppsett(modellvalg=None, modell=None, whisper=None, malform=None):
                    (HER / "vokabular" / "offentlig_no.txt",), malform)
 
 
+def krev_montert(sti):
+    """En sti på et eksternt volum (/Volumes/<navn>/…, også via symlenke) brukes
+    bare når volumet faktisk er montert. Ellers stopp: mkdir under /Volumes på et
+    umontert volum ville lagt filene på intern disk uten at noen merket det."""
+    ekte = pathlib.Path(os.path.realpath(pathlib.Path(sti).expanduser()))
+    deler = ekte.parts
+    if len(deler) >= 3 and deler[1] == "Volumes":
+        rot = pathlib.Path("/", "Volumes", deler[2])
+        if not os.path.ismount(rot):
+            raise KjerneFeil(f"{rot} er ikke montert. Ingenting kjøres, og ingenting legges på intern disk "
+                             f"i stedet ({sti}).")
+    return ekte
+
+
+def standard_opptaksmappe():
+    return pathlib.Path(os.environ.get("NORSK_TALE_OPPTAK") or pathlib.Path.home() / "norsk-tale-opptak").expanduser()
+
+
 def verifiser_modell(sti, forventet):
     """Strømmer SHA256 over modellfila. Avvik eller manglende fil = KjerneFeil."""
+    krev_montert(sti)
     sti = pathlib.Path(sti)
     if not sti.is_file():
         raise KjerneFeil(f"Fant ikke modellen: {sti}")
@@ -407,8 +426,17 @@ def main(argv=None):
                     help="Sjekk ffmpeg, whisper.cpp og modell (med SHA256) uten å transkribere.")
     ap.add_argument("--uten-sha", action="store_true",
                     help="Hopp over SHA256 i --sjekk (raskere; ikke ved transkripsjon).")
+    ap.add_argument("--krev-montert", metavar="STI", default=None,
+                    help="Avslutt med kode 5 hvis STI ligger på et eksternt volum som ikke er montert.")
     ap.add_argument("--versjon", action="store_true")
     a = ap.parse_args(argv)
+    if a.krev_montert:
+        try:
+            krev_montert(a.krev_montert)
+            return 0
+        except KjerneFeil as e:
+            print(f"norsk-tale: {e}", file=sys.stderr)
+            return 5
     if a.versjon:
         print(VERSJON)
         return 0

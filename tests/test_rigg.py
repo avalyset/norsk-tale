@@ -267,3 +267,11 @@ def test_siden_avviser_file_og_manglende_token():
     assert 'location.protocol === "file:" || !location.host' in html
     assert "kan ikke åpnes som fil" in html and "mangler token" in html
     assert '<span id="fulltEtikett">Fullt manus (100 opptak)</span>' in html   # tallet står selv uten JavaScript
+
+
+def test_rigg_starter_ikke_paa_umontert_volum(tmp_path):
+    p = subprocess.run([sys.executable, "-I", str(RIGG), "--opptak", "/Volumes/norsk-tale-finnes-ikke/opptak"],
+                       capture_output=True, text=True, timeout=30)
+    assert p.returncode == 5
+    assert json.loads(p.stdout.splitlines()[0])["type"] == "feil"
+    assert not pathlib.Path("/Volumes/norsk-tale-finnes-ikke").exists()
