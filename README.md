@@ -75,18 +75,24 @@ og `NORSK_TALE_OPPTAK`) dit. Er disken ikke montert, får du en tydelig feilmeld
 og ingenting skrives til intern disk i stedet.
 
 `kalibrering/vakt.py` kjører tunge jobber (for eksempel whisper på CPU) med
-`nice -n 19`. Den avbryter jobben når ledig minne faller under 20 %, målt med
-`memory_pressure -Q` som norregels minnevakt, eller når intern disk har mindre enn
-10 GiB ledig. Den sjekker hvert 5. sekund og logger hver sjekk og hvert avbrudd.
+`nice -n 19`. Den avbryter jobben i tre tilfeller:
 
-### Målt: `-l nn` gir nynorsk, men kan miste en nektelse
+- ledig minne faller under 20 %, målt med `memory_pressure -Q` som norregels minnevakt
+- brukt swap øker mer enn 1 GB fra kjøringen startet
+- intern disk har mindre enn 10 GiB ledig
 
-Dette ble målt 19.10.2026 på ett bokmålsopptak (45 s) med medium og large, på CPU.
-Med `-l nn` skrev whisper.cpp nynorsk («sjå», «ein», «berre», «mogleg», «ikkje»).
-Med large forsvant samtidig én av to nektelser: «Det er ikke sikkert …» med `nb` ble
-«Det er sikkert …» med `nn`. Velg derfor målformen du faktisk snakker, og les
-gjennom teksten før du sender den. `/norsk selvtest` og `/norsk kalibrer` måler
-dette for din stemme.
+Den sjekker hvert 5. sekund og logger hver sjekk og hvert avbrudd.
+
+### Observert i ett klipp: bokmålstale transkribert med `-l nn`
+
+19.10.2026 ble ett klipp med bokmålstale (45 s) transkribert med `-l nn`, med
+medium og large på CPU. whisper.cpp skrev da nynorske former («sjå», «ein»,
+«berre», «mogleg», «ikkje»). I samme klipp forsvant én av to nektelser med large:
+«Det er ikke sikkert …» med `nb` ble «Det er sikkert …» med `nn`.
+
+Dette er én observasjon i ett klipp, ikke en måling av hvor ofte det skjer.
+Standard målform er `nb`. Standardkalibreringen skal måle målformkryss og tapte
+nektelser på etablerte testsett.
 
 ### Modellvalg og minnebruk
 
