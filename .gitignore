@@ -23,3 +23,7 @@ node_modules/
 # Private vokabular- og fasitfiler hører aldri hjemme her
 lokal.txt
 fasit_lokal.tsv
+
+# Selvtest- og kalibreringsresultater inneholder transkribert tale
+selvtest-*.json
+norsk-tale-opptak/

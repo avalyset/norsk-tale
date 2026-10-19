@@ -40,6 +40,9 @@ innstillinger.
   (`start`, `stopp`, `avslutt`) som slettes etter hvert som de leses. Den tomme
   katalogen blir liggende til systemet rydder `$TMPDIR`.
 - Modellen ligger der du har lagt den. Standard er `~/.cache/norsk-tale/`.
+- `/norsk selvtest` lagrer resultatet som `~/norsk-tale-opptak/selvtest-<tidspunkt>.json`:
+  setningene, teksten som ble transkribert, målingene og scoren. Ingen lyd. Fila
+  blir liggende til du sletter den.
 
 ## Nedlasting
 

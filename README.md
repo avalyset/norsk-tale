@@ -63,7 +63,7 @@ Innstillingene finnes i `/config` under pluginen:
 |---|---|---|
 | `modellvalg` | `large` | `large`, `medium` eller `small` |
 | `modell` | tom | Sti til `ggml-model.bin`. Tom betyr `~/.cache/norsk-tale/nb-whisper-<modellvalg>.bin` |
-| `whisper` | `whisper-cli` | Navn eller sti til `whisper-cli`. En eventuell `whisper-server` letes etter i samme mappe, eller på PATH når bare navnet er gitt |
+| `whisper` | tom | Navn eller sti til `whisper-cli`. Tom betyr `whisper-cli` på PATH. En eventuell `whisper-server` letes etter i samme mappe, eller på PATH når bare navnet er gitt |
 
 ### Modellvalg og minnebruk
 
@@ -102,6 +102,36 @@ null-signal i ett sekund, sier norsk-tale fra og ber deg sjekke tilgangen.
 - **Skillen:** be Claude om å transkribere en lydfil, for eksempel «transkriber
   ~/Opptak/møte.m4a». Den bruker den samme kjernen. Hvert kall laster modellen på
   nytt.
+
+## Sjekk at det virker: `/norsk selvtest`
+
+Selvtesten prøver hele dikteringsveien på din maskin: samme mikrofon,
+stillhetsvakt, modell, korrektor og innsetting som ved vanlig bruk.
+
+1. Tøm promptboksen og skriv `/norsk selvtest`.
+2. Over prompten vises én setning om gangen, seks i alt, der den siste er på
+   nynorsk. Trykk «🎙 Norsk», les setningen og vent til opptaket stopper av seg
+   selv.
+3. Til slutt ber testen deg trykke «Angre».
+
+Før hvert opptak setter testen `TEST-N: ` i promptboksen. Etter innsettingen leser
+den boksen og sjekker:
+
+- at nektelser, tall og etatsnavn kom med (tall som sifre eller ord)
+- at første ord ikke er klippet bort
+- at prefikset står urørt foran teksten
+- at Angre gir tilbake `TEST-6: `
+
+Den rapporterer også hvor lenge det gikk fra siste tale til opptaket stoppet (målet
+er 1,5 s), og fra stopp til tekst i boksen. Kom den nynorske setningen ut på
+bokmål, står det som et funn, ikke som en feil.
+
+Mens testen pågår, sendes ingenting inn. Trykker du Enter, blir det stoppet.
+Resultatet vises i panelet «norsk-tale selvtest» og lagres som
+`~/norsk-tale-opptak/selvtest-<tidspunkt>.json`. Fila inneholder teksten som ble
+transkribert, men ingen lyd. «Avbryt test» eller `/norsk selvtest avbryt` stopper
+underveis og lagrer det som er gjort. Scoringen (`kalibrering/score.py`) er
+deterministisk og bruker ingen språkmodell.
 
 ### Kjent begrensning
 

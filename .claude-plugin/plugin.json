@@ -31,8 +31,8 @@
     "whisper": {
       "type": "string",
       "title": "whisper-cli",
-      "description": "Navn eller sti til whisper-cli fra whisper.cpp. En eventuell whisper-server (holder modellen lastet) letes etter i samme mappe, eller på PATH når bare navnet er gitt.",
-      "default": "whisper-cli"
+      "description": "Navn eller sti til whisper-cli fra whisper.cpp. Tom: whisper-cli på PATH. En eventuell whisper-server (holder modellen lastet) letes etter i samme mappe, eller på PATH når bare navnet er gitt.",
+      "default": ""
     }
   }
 }

@@ -31,6 +31,7 @@ const rig = (on: On, svar: (ord: string) => ProcessSpawnChunk[], utkast = { text
   let vekk: (() => void) | undefined
 
   mock.env(on, { TMPDIR: '/tmp/test/' })
+  mock.clock(on)
   on('session.id', () => ({ value: 'okt-1' }))
   on('fs.write', ($, e) => {
     kommandoer.push(`${e.path}=${e.text}`)
@@ -90,7 +91,7 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
 
       expect(rec.spawns.length).toBe(1)
       expect(rec.spawns[0]?.slice(0, 2)).toEqual(['python3', '-I'])
-      expect(rec.spawns[0]?.slice(-6)).toEqual(['--modellvalg', 'large', '--modell', '', '--whisper', 'whisper-cli'])
+      expect(rec.spawns[0]?.slice(-6)).toEqual(['--modellvalg', 'large', '--modell', '', '--whisper', ''])
       expect(rec.kommandoer).toEqual(['/tmp/test/norsk-tale-okt-1/1.cmd=start'])
       // segmentlinjene blir løpende tekst, og et mellomrom skiller fra utkastet
       expect(rec.fills).toEqual([{ text: ' Vi trenger tre eksemplarer, ikke fire.', mode: 'insert' }])

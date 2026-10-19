@@ -1,0 +1,9 @@
+# norsk-tale selvtest v1. Målelementer: tall skrives som sifre; utdata normaliseres
+# (tallord → sifre) før sammenligning. Første form er den som vises som fasit ved bom.
+id	malform	klasse	setning	elementer
+1	nb	kombinert	Jeg har ikke betalt de tre tusen fire hundre og femti kronene til Skatteetaten ennå.	[{"type": "nektelse", "former": ["ikke"]}, {"type": "tall", "former": ["3450"]}, {"type": "navn", "former": ["Skatteetaten"]}]
+2	nb	kombinert	Møtet er flyttet fra tirsdag fjortende til torsdag sekstende oktober, ikke onsdag.	[{"type": "tall", "former": ["14"]}, {"type": "tall", "former": ["16"]}, {"type": "nektelse", "former": ["ikke onsdag"]}]
+3	nb	kombinert	Vi trenger tjuefem prosent flere søknader, men aldri flere enn hundre og tjue i året.	[{"type": "tall", "former": ["25 prosent"]}, {"type": "nektelse", "former": ["aldri"]}, {"type": "tall", "former": ["120"]}]
+4	nb	kombinert	Ingen av de sju sakene hos NAV ble avvist i tjuetjuefem.	[{"type": "nektelse", "former": ["ingen"]}, {"type": "tall", "former": ["7"]}, {"type": "navn", "former": ["NAV"]}, {"type": "tall", "former": ["2025"]}]
+5	nb	kombinert	Innovasjon Norge sa nei, og Forskningsrådet har ikke svart på søknaden fra mars.	[{"type": "navn", "former": ["Innovasjon Norge"]}, {"type": "nektelse", "former": ["nei"]}, {"type": "navn", "former": ["Forskningsrådet"]}, {"type": "nektelse", "former": ["ikke", "ikkje"]}]
+6	nn	kombinert	Eg har ikkje fått svar frå Statsforvaltaren om dei tre søknadene.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}, {"type": "navn", "former": ["Statsforvaltaren", "Statsforvalteren"]}, {"type": "tall", "former": ["3"]}]

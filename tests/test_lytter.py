@@ -220,3 +220,20 @@ def test_uten_whisper_server_brukes_filbanen(monkeypatch, capsys):
     lytter.poll()
     assert len(FalskKjerne.filkall) == 1
     assert '"type": "tekst"' in capsys.readouterr().out
+
+
+def test_stillhetsmaaling_i_lydtid():
+    """1 s tale, så stillhet til vakten stopper: avstanden er 1,5 s (50 rammer)."""
+    v = nl.Stillhetsvakt()
+    mat(v, STILLE, rammer(0.5))
+    assert mat(v, HOY, rammer(1.0)) is None
+    assert mat(v, STILLE, rammer(3.0)) == "stillhet"
+    m = v.maling()
+    assert m["stillhet_ms"] == rammer(1.5) * nl.RAMME_MS == 1500
+    assert m["tale_ms"] == rammer(1.0) * nl.RAMME_MS
+
+
+def test_maling_uten_tale_er_tom():
+    v = nl.Stillhetsvakt()
+    mat(v, STILLE, rammer(1.0))
+    assert v.maling() == {"stillhet_ms": None, "tale_ms": None}

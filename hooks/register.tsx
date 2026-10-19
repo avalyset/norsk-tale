@@ -8,12 +8,17 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { NorskAngre, NorskStatus } from '../types'
+import type { NorskAngre, NorskSelvtest, NorskStatus } from '../types'
+import {
+  PANE, aktivTest, avslutt, etterAngre, etterInnsetting, oppsummer, startSelvtest, tabell,
+} from './selvtest'
 
 const status = atom({ plugin: 'norsk-tale', key: 'status' } as const, 'av' as NorskStatus)
 const melding = atom({ plugin: 'norsk-tale', key: 'melding' } as const, null as string | null)
 const angre = atom({ plugin: 'norsk-tale', key: 'angre' } as const, null as NorskAngre | null)
 const laster = atom({ plugin: 'norsk-tale', key: 'laster' } as const, false)
+// Samme verdi som selvtest.ts skriver; validatoren vil ha referansen i fila som leser den.
+const selvtest = atom({ plugin: 'norsk-tale', key: 'selvtest' } as const, null as NorskSelvtest | null)
 
 type Resultat = {
   verbatim: string
@@ -30,10 +35,10 @@ type Hendelse =
   | { type: 'frigjort'; etter_s: number }
   | { type: 'lytter' }
   | { type: 'tale' }
-  | { type: 'behandler'; slutt: string }
+  | { type: 'behandler'; slutt: string; stillhet_ms?: number | null }
   | { type: 'tom'; slutt: string }
   | { type: 'feil'; melding: string }
-  | { type: 'tekst'; slutt: string; resultat: Resultat }
+  | { type: 'tekst'; slutt: string; resultat: Resultat; stillhet_ms?: number | null }
 
 const TEKST: Record<NorskStatus, string> = {
   av: '',
@@ -57,10 +62,11 @@ export function medMellomrom(utkast: string, markor: number, tekst: string): str
 // Modulens egen tilstand: nullstilles ved omlasting, som lytterprosessen.
 let modellvalg = 'large'
 let modell = ''
-let whisper = 'whisper-cli'
+let whisper = ''
 let kontroll: string | undefined
 let lopenr = 0
 let lever = false
+let stoppetVed: number | null = null  // klokka da opptaket stoppet (hendelsen «behandler»)
 
 async function sett($: EngineInterface, s: NorskStatus, m: string | null = null) {
   await update($, status, () => s)
@@ -82,7 +88,8 @@ async function kommando($: EngineInterface, ord: 'start' | 'stopp' | 'avslutt') 
   await $.fs.write(`${kontroll}/${lopenr}.cmd`, ord)
 }
 
-async function settInn($: EngineInterface, r: Resultat) {
+async function settInn($: EngineInterface, h: { slutt: string; resultat: Resultat; stillhet_ms?: number | null }) {
+  const r = h.resultat
   // Kjernen gir én linje per whisper-segment; i promptboksen er det løpende tekst.
   const tekst = r.korrigert.replace(/\s*\n\s*/g, ' ').trim()
   if (!tekst) {
@@ -96,8 +103,16 @@ async function settInn($: EngineInterface, r: Resultat) {
     mode: 'insert',
   })
   if (fylt.isFilled) {
+    const naa = await $.clock.now()
     await update($, angre, () => ({ text: boks.text, cursor: boks.cursor }))
     await sett($, 'av')
+    const maltTest = await etterInnsetting($, {
+      verbatim: r.verbatim, slutt: h.slutt, stillhet_ms: h.stillhet_ms ?? null,
+      stopp_til_tekst_ms: stoppetVed === null ? null : naa - stoppetVed,
+    })
+    const st = await aktivTest($)
+    // Mellom setningene hører ikke Angre hjemme: bare det siste steget bruker den.
+    if (maltTest && st && st.steg <= st.setninger.length) await update($, angre, () => null)
   } else {
     await sett($, 'feil', 'Promptboksen tok ikke imot teksten (en dialog er åpen?). Ingenting ble sendt.')
   }
@@ -118,6 +133,7 @@ async function hendelse($: EngineInterface, h: Hendelse) {
     case 'tale':
       return sett($, 'tale')
     case 'behandler':
+      stoppetVed = await $.clock.now()
       return sett($, 'behandler')
     case 'tom':
       await sett($, 'av')
@@ -129,7 +145,7 @@ async function hendelse($: EngineInterface, h: Hendelse) {
       $.ui.toast(`norsk-tale: ${h.melding}`)
       return
     case 'tekst':
-      return settInn($, h.resultat)
+      return settInn($, h)
   }
 }
 
@@ -187,6 +203,8 @@ async function veksle($: EngineInterface): Promise<string> {
     return 'Stopper opptaket.'
   }
   if (s === 'behandler') return 'Transkriberer fortsatt.'
+  const st = await read($, selvtest)
+  if (st && !st.aktiv) await update($, selvtest, () => null)   // gammel oppsummering bort
   await startLytter($)
   await sett($, 'starter')
   await kommando($, 'start')
@@ -214,19 +232,20 @@ async function angreNa($: EngineInterface): Promise<string> {
   if (!forrige) return 'Ingenting å angre.'
   await $.prompt.fill({ text: forrige.text, mode: 'replace' })
   await update($, angre, () => null)
+  if (await etterAngre($)) return 'Prompten er satt tilbake. Selvtesten er ferdig.'
   return 'Prompten er satt tilbake.'
 }
 
 export const register: Register = (on, options) => {
   modellvalg = String(options.modellvalg ?? 'large')
   modell = String(options.modell ?? '')
-  whisper = String(options.whisper ?? 'whisper-cli')
+  whisper = String(options.whisper ?? '')
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'norsk',
-      description: 'Lokal norsk diktering: start/stopp; «angre», «av» (frigjør modellen), «oppsett» (sjekk installasjonen)',
-      argumentHint: '[angre|av|oppsett]',
+      description: 'Lokal norsk diktering: start/stopp; «angre», «av» (frigjør modellen), «oppsett», «selvtest»',
+      argumentHint: '[angre|av|oppsett|selvtest]',
       immediate: true,
     })
     return next(e)
@@ -236,12 +255,21 @@ export const register: Register = (on, options) => {
     const arg = e.args.trim().toLowerCase()
     if (arg === 'angre') return { text: await angreNa($) }
     if (arg === 'oppsett') return { text: await oppsett($) }
+    if (arg === 'selvtest') {
+      if (await aktivTest($)) return { text: 'Selvtesten pågår allerede. Avbryt med /norsk selvtest avbryt.' }
+      return { text: await startSelvtest($) }
+    }
+    if (arg === 'selvtest avbryt') {
+      if (!(await aktivTest($))) return { text: 'Ingen selvtest pågår.' }
+      await update($, angre, () => null)
+      return { text: await avslutt($, true) }
+    }
     if (arg === 'av') {
       await kommando($, 'avslutt')
       await sett($, 'av')
       return { text: 'Lytteren er stoppet og modellen frigjort.' }
     }
-    if (arg !== '') return { text: `Ukjent argument «${arg}». Bruk /norsk, /norsk angre, /norsk av eller /norsk oppsett.` }
+    if (arg !== '') return { text: `Ukjent argument «${arg}». Bruk /norsk, /norsk angre, /norsk av, /norsk oppsett eller /norsk selvtest.` }
     return { text: await veksle($) }
   })
 
@@ -250,10 +278,25 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // En ny innsending gjør den gamle angre-tilstanden meningsløs.
+  // Under selvtesten sendes ingenting inn: Enter på «TEST-N: …» stoppes her.
+  // Ellers gjør en ny innsending den gamle angre-tilstanden meningsløs.
   on('prompt.submit', async ($, e, next) => {
+    if (!e.command && (await aktivTest($))) {
+      return { drop: 'Selvtesten pågår, og ingenting sendes inn. Avbryt med /norsk selvtest avbryt.' }
+    }
     await update($, angre, () => null)
     return next(e)
+  })
+
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const { Box, Text } = $.ui.resolve(e)
+    const st = await read($, selvtest)
+    if (!st) return <Text dimColor>Ingen selvtest er kjørt i denne økten.</Text>
+    return (
+      <Box flexDirection="column">
+        {tabell(st).map((l, i) => <Text key={`l${i}`} color={l.includes('✘') || l.trimStart().startsWith('bom') ? 'red' : undefined}>{l}</Text>)}
+      </Box>
+    )
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -263,13 +306,38 @@ export const register: Register = (on, options) => {
     const m = await read($, melding)
     const a = await read($, angre)
     const l = await read($, laster)
+    const st = await read($, selvtest)
     const aktiv = s === 'lytter' || s === 'tale' || s === 'starter'
     const linje = s === 'feil' ? m ?? 'Ukjent feil.' : TEKST[s] + (l && aktiv ? ' Modellen lastes …' : '')
-    return (
+    const knapper = (
       <Box>
         <Button key="norsk" label={aktiv ? '■ Stopp' : '🎙 Norsk'} onPress={() => veksle($)} />
         {a !== null && <Button key="angre" label="Angre" onPress={() => angreNa($)} />}
+        {st?.aktiv && <Button key="avbryt" label="Avbryt test" onPress={() => avslutt($, true)} />}
         {linje !== '' && <Text color={s === 'feil' ? 'red' : undefined} dimColor={s !== 'feil'}> {linje}</Text>}
+      </Box>
+    )
+    if (!st) return knapper
+    let tekst1 = ''
+    let tekst2 = ''
+    const antall = st.setninger.length
+    if (st.aktiv && st.steg <= antall) {
+      const set = st.setninger[st.steg - 1]
+      tekst1 = `Selvtest – setning ${st.steg} av ${antall}${set?.malform === 'nn' ? ' (nynorsk)' : ''}: «${set?.setning ?? ''}»`
+      tekst2 = 'Trykk 🎙 Norsk, les setningen og vent. Ikke trykk Enter: ingenting sendes inn.'
+    } else if (st.aktiv) {
+      tekst1 = 'Selvtest – siste steg: trykk Angre.'
+      tekst2 = `Testen sjekker at prompten blir «TEST-${antall}: » igjen, og tømmer den etterpå.`
+    } else {
+      const o = oppsummer(st)
+      tekst1 = `Selvtest ${st.avbrutt ? 'avbrutt' : 'ferdig'}: ${o.bestatt} av ${o.sjekker} sjekker bestått${o.funn.length ? `, ${o.funn.length} funn` : ''}.`
+      tekst2 = `Detaljer i panelet «norsk-tale selvtest». Lagret: ${st.fil ?? '–'}`
+    }
+    return (
+      <Box flexDirection="column">
+        {knapper}
+        <Text key="selvtest1">{tekst1}</Text>
+        <Text key="selvtest2" dimColor>{tekst2}</Text>
       </Box>
     )
   })

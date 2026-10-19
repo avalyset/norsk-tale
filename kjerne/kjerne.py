@@ -215,7 +215,7 @@ def sjekk_oppsett(oppsett, verifiser_sha=True):
         tiltak.append(_installer_hint())
     if oppsett.whisper_server is None:
         # Homebrew-formelen bygger whisper.cpp med WHISPER_BUILD_SERVER=OFF.
-        merknader.append("whisper-server finnes ikke (Homebrew-pakken bygger den ikke). "
+        merknader.append("whisper-server ble ikke funnet (Homebrew-pakken bygger den ikke). "
                          "Dikteringen bruker da whisper-cli og laster modellen for hvert "
                          "opptak, som er tregere enn å holde den lastet.")
     sha = None

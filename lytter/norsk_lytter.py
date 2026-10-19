@@ -73,6 +73,8 @@ class Stillhetsvakt:
         self.over = 0
         self.under = 0
         self.nuller = 0
+        self.innsats = None     # rammenummer for taleinnsats
+        self.siste_tale = None  # rammenummer for siste ramme over terskelen
 
     def terskel(self):
         if not self.kalibrering:
@@ -93,16 +95,27 @@ class Stillhetsvakt:
             self.over = self.over + 1 if hoy else 0
             if self.over >= self.innsats_rammer:
                 self.har_tale = True
+                self.innsats = self.siste_tale = self.rammer
                 self.tale.extend(b"".join(self.preroll))
                 self.preroll.clear()
         else:
             self.tale.extend(ramme)
+            if hoy:
+                self.siste_tale = self.rammer
             self.under = 0 if hoy else self.under + 1
             if self.under >= self.stillhet_rammer:
                 return "stillhet"
         if self.rammer >= self.tak_rammer:
             return "tak"
         return None
+
+    def maling(self):
+        """Lydtid i ms: fra siste ramme med tale til stopp, og talens lengde.
+        Målt i rammer, så det er uavhengig av hvor travel maskinen er."""
+        if not self.har_tale or self.innsats is None or self.siste_tale is None:
+            return {"stillhet_ms": None, "tale_ms": None}
+        return {"stillhet_ms": (self.rammer - self.siste_tale) * RAMME_MS,
+                "tale_ms": (self.siste_tale - self.innsats + self.innsats_rammer) * RAMME_MS}
 
     def bare_nuller(self):
         """Ett sekund med eksakt null-signal: macOS leverer det når appen
@@ -284,7 +297,8 @@ class Lytter:
         if not o.vakt.har_tale:
             emit(type="tom", slutt=o.grunn)
             return
-        emit(type="behandler", slutt=o.grunn)
+        maling = o.vakt.maling()
+        emit(type="behandler", slutt=o.grunn, **maling)
         filbane = self.oppsett is not None and self.oppsett.whisper_server is None
         if self.laster:
             self.laster.join()
@@ -305,7 +319,7 @@ class Lytter:
                 emit(type="feil", melding=f"Transkripsjonen feilet: {e}")
                 return
         self.sist_aktiv = self.klokke()
-        emit(type="tekst", slutt=o.grunn, resultat=resultat)
+        emit(type="tekst", slutt=o.grunn, resultat=resultat, **maling)
 
     def avslutt(self):
         self.stopp()
