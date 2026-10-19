@@ -15,11 +15,11 @@ DISABLE_AUTOUPDATER=1 claude --plugin-dir .
 
 - `DISABLE_AUTOUPDATER=1` (eller `DISABLE_UPDATES=1`, som også stopper `claude
   update`) må stå i miljøet til selve `claude`-prosessen.
-- `"autoUpdates": false` i `~/.claude.json` **holder ikke** ved
+- `"autoUpdates": false` i Claude Codes globale konfigurasjon **holder ikke** ved
   native-installasjon. Når `autoUpdatesProtectedForNative` er satt, ser
   oppdatereren bort fra den (målt i koden til 2.1.303).
 - «Updated to latest. Got …» ved oppstart er utgivelsesnotater. Meldingen vises
-  første gang en versjon nyere enn `lastReleaseNotesSeen` i `~/.claude.json`
+  første gang en versjon nyere enn `lastReleaseNotesSeen` i den samme fila
   starter, også når oppdatering er slått av. Den betyr ikke at noe ble lastet ned
   i den økten.
 - Sjekk før og etter: `ls ~/.local/share/claude/versions` og

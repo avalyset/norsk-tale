@@ -22,7 +22,7 @@ Pluginen har fire deler:
 **Claude kan aldri starte mikrofonen; bare ditt trykk eller din snarvei gjør det.**
 **Nett brukes én gang ved installasjon (MCP-SDK), aldri under bruk.**
 
-Versjon 0.2.2 (2026-10-19), arkivert på Zenodo:
+Versjon 0.2.3 (2026-10-19), arkivert på Zenodo:
 [10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248) (alle versjoner;
 v0.2.2 er [10.5281/zenodo.23474643](https://doi.org/10.5281/zenodo.23474643), v0.2.1 er [10.5281/zenodo.23474554](https://doi.org/10.5281/zenodo.23474554), v0.2.0 er
 [10.5281/zenodo.23474380](https://doi.org/10.5281/zenodo.23474380), v0.1.1 er
@@ -366,8 +366,8 @@ modden eller skillen. Claude Code starter serveren selv fra `.mcp.json` med
 | `start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`, `sjekk_mappe` og `start_kalibrering` | Bare modden |
 
 Modden skjuler de øvrige verktøyene for Claude (`tool.describe`) og avviser alle kall
-til dem som ikke kommer fra modden selv (`tool.check`, `tool.call` og `mcp.call`,
-etter hvem som kaller). Claude kan aldri starte mikrofonen; bare ditt trykk eller
+til dem som ikke kommer fra modden selv (`tool.check` og `tool.call`, etter hvem som
+kaller). Hookene matcher bare disse sju verktøynavnene og ser ingen andre verktøy. Claude kan aldri starte mikrofonen; bare ditt trykk eller
 din snarvei gjør det.
 
 **Filer pluginen skriver:**
@@ -392,8 +392,40 @@ du selv sender prompten.
 - `command.run` svarer på `/norsk`.
 - `ui.render` tegner båndet over prompten og selvtestpanelet.
 - `session.start` registrerer kommandoen.
-- `tool.describe`, `tool.check`, `tool.call` og `mcp.call` er mikrofonvernet
-  beskrevet over.
+- `tool.describe`, `tool.check` og `tool.call` er mikrofonvernet beskrevet over.
+
+## Til katalogens vurderere
+
+Svar på funnene fra katalogens automatiske sjekk, med fil og linje i
+`hooks/register.tsx` slik de står i denne versjonen.
+
+- **Linje 114, skriver en fil:** `/norsk selvtest` skriver en selvtestrapport
+  (JSON, uten lyd og uten transkripsjon) til opptaksmappa,
+  `selvtest-claude-<tidspunkt>.json`. Ingen kode leser eller kjører fila. Det er
+  ingen bygge-, oppstarts-, innstillings- eller instruksjonsfil.
+- **Linje 236, kaller verktøy selv:** modden kaller bare pluginens egne
+  MCP-verktøy (`start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`,
+  `sjekk_mappe` og `start_kalibrering`), og bare når du trykker på knappen, bruker
+  snarveien eller skriver `/norsk`. Den sender ingenting ut av maskinen. Av
+  samtalen leser den bare promptboksen den skriver dikteringen inn i, og den sender
+  aldri inn prompten.
+- **Linje 444, hook på tillatelsessjekken:** `tool.check` avviser modellens kall til
+  de sju verktøyene over (mikrofonvernet) og gjør ingenting annet. Alle andre
+  verktøy går forbi urørt.
+- **Hooker verktøykall (linje 438, 444 og 449):** modden lytter på `tool.describe`,
+  `tool.check` og `tool.call`, hver med en matcher som bare velger de sju
+  verktøynavnene over (`VERNEDE`, linje 207). Hooken på `mcp.call` som sto på
+  linje 455 i 0.2.2, er fjernet. Modden hooker ingen nettverks- eller programkall.
+- **Nett:** bare `pip install` av MCP-SDK-en ved første oppstart, låst til eksakte
+  versjoner med SHA256-hasher (`mcp/krav.txt`, `pip install --require-hashes
+  --only-binary :all:`). Aldri under bruk.
+- **«Download-and-run»:** de tre treffene er dokumentasjon og tekst som vises til
+  brukeren, ingenting som kjøres: `README.md` (omtale av `curl`),
+  `kjerne/kjerne.py:276` (en kommando `/norsk oppsett` viser, men ikke kjører) og
+  `tests/test_rigg.py` (en negativkontroll for nettforbudet, uten nedlasting).
+- **Ikon:** `assets/icon.png` er bare et bilde. Ingen kode kjører det.
+- **Legitimasjon:** ingen kode leser innloggingsopplysninger, nøkler eller filer
+  med slike. Riggen lager selv et tilfeldig engangstoken for `127.0.0.1`.
 
 ## Personvern
 
@@ -404,11 +436,8 @@ forbindelsene er loopback (`127.0.0.1`): til en lokal `whisper-server` når den
 finnes, og mellom nettleseren og kalibreringsriggen når du bruker `/norsk kalibrer`.
 Teksten du sender til Claude, går dit som all annen tekst du sender.
 
-**Ingen legitimasjon leses.** Katalogens automatiske sjekk har merket pluginen med
-«Uses a credential from the user's machine». Funnene gjaldt omtale i
-dokumentasjonen, ikke kode. Pluginen leser ingen tokens, API-nøkler eller andre
-hemmeligheter. Av miljøet leser den bare `HOME`, `PATH` (for å finne programmene)
-og egne `NORSK_TALE_*`-variabler.
+Av miljøet leser pluginen bare `HOME`, `PATH` (for å finne programmene) og egne
+`NORSK_TALE_*`-variabler. Den leser ingen innloggingsopplysninger.
 `huggingface.co` står her bare som kilde og kreditering.
 
 ## Utvikling

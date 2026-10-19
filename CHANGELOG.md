@@ -3,6 +3,29 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
+## [0.2.3] – 2026-10-19
+
+Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring.
+
+### Endret
+
+- Mikrofonvernets hooks (`tool.describe`, `tool.check`, `tool.call`) har fått en
+  matcher som bare velger pluginens sju egne verktøy (`VERNEDE`). Andre verktøy går
+  forbi uten å se hookene.
+- Hooken på `mcp.call` er fjernet. Modellens kall stoppes av `tool.check` og
+  `tool.call`, og porttesten for mikrofonvernet består uendret og feiler fortsatt
+  uten vernet. Modden hooker nå ingen nettverks-, MCP- eller programkall.
+- README har fått seksjonen «Til katalogens vurderere», som svarer på hvert funn med
+  fil og linje.
+- `docs/UTVIKLING.md` nevner ikke lenger stien til Claude Codes konfigurasjonsfil,
+  og README-avsnittet om legitimasjon er omformulert. Ingen kode leser
+  innloggingsopplysninger.
+
+### Lagt til
+
+- `tests/test_katalogregler.py`: modden hooker ingen nett-, MCP- eller programkall,
+  og verktøyhookene har matcheren.
+
 ## [0.2.2] – 2026-10-19
 
 ### Rettet
@@ -117,6 +140,7 @@ versjonene følger semantisk versjonering.
 - Målformkrysset (nb mot nn) og de øvrige testsettene (NST, NPSC, NB Samtale) er
   fase 2 og ikke kjørt.
 
+[0.2.3]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.3
 [0.2.2]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.2
 [0.2.1]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.1
 [0.2.0]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.0

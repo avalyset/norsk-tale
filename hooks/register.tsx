@@ -203,14 +203,12 @@ export const AVVIST = 'norsk-tale: verktøyet brukes bare av pluginens knapp og 
 const SLUTT = new Set(['tekst', 'tom', 'feil'])
 
 // Navnet modellen og hookene ser: mcp__plugin_norsk-tale_norsk-tale__<verktøy>.
+// Mikrofonvernets hooks matcher bare disse navnene og ser ingen andre verktøy.
+export const VERNEDE = /^mcp__.*norsk[-_]tale.*__(start_opptak|stopp_opptak|status|frigjor|oppsett|sjekk_mappe|start_kalibrering)$/
+
 export function bareForModden(navn: string): boolean {
   const m = /^mcp__.*norsk[-_]tale.*__([a-z_]+)$/.exec(navn)
   return m !== null && (BARE_MODDEN as readonly string[]).includes(m[1] ?? '')
-}
-
-// Serverens navn i $.mcp.call, slik $.mcp.connect oppgir det («plugin:norsk-tale:norsk-tale»).
-export function erVarServer(navn: string): boolean {
-  return /norsk[-_]tale/.test(navn)
 }
 
 // Modulens egen tilstand: nullstilles ved omlasting.
@@ -435,28 +433,21 @@ export const register: Register = (on, options) => {
 
   // Mikrofonvern: verktøyene som kan åpne mikrofonen (og resten av moddens egne)
   // skjules for Claude og avvises for alle kall som ikke kommer fra denne modden.
-  // Modellens egne kall har next.origin.plugin === 'engine'.
-  on('tool.describe', async ($, e, next) => {
+  // Modellens egne kall har next.origin.plugin === 'engine'. Matcheren gjør at
+  // hookene bare ser disse sju verktøyene; alle andre verktøy går forbi urørt.
+  on('tool.describe', { tool: VERNEDE }, async ($, e, next) => {
     if (!bareForModden(e.tool)) return next(e)
     return { description: 'Ikke tilgjengelig for Claude: brukes bare av norsk-tale-modden etter brukerens trykk.',
       isDeferred: true }
   })
 
-  on('tool.check', async ($, e, next) => {
+  on('tool.check', { tool: VERNEDE }, async ($, e, next) => {
     if (bareForModden(e.tool) && next.origin.plugin !== 'norsk-tale') return { decision: 'deny', reason: AVVIST }
     return next(e)
   })
 
-  on('tool.call', async ($, e, next) => {
+  on('tool.call', { tool: VERNEDE }, async ($, e, next) => {
     if (bareForModden(e.tool) && next.origin.plugin !== 'norsk-tale') return { deny: AVVIST }
-    return next(e)
-  })
-
-  on('mcp.call', async ($, e, next) => {
-    const bare = (BARE_MODDEN as readonly string[]).includes(e.tool)
-    if (bare && erVarServer(e.server) && next.origin.plugin !== 'norsk-tale') {
-      return { deny: AVVIST }
-    }
     return next(e)
   })
 
