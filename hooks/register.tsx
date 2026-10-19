@@ -9,20 +9,137 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { NorskAngre, NorskSelvtest, NorskStatus } from '../types'
-import {
-  PANE, PREFIKS, aktivTest, avslutt, etterAngre, etterInnsetting, opptaksmappe, oppsummer, settOpptaksmappe, startSelvtest,
-  tabell,
-} from './selvtest'
 
 const status = atom({ plugin: 'norsk-tale', key: 'status' } as const, 'av' as NorskStatus)
 const melding = atom({ plugin: 'norsk-tale', key: 'melding' } as const, null as string | null)
 const angre = atom({ plugin: 'norsk-tale', key: 'angre' } as const, null as NorskAngre | null)
 const laster = atom({ plugin: 'norsk-tale', key: 'laster' } as const, false)
-// Samme verdi som selvtest.ts skriver; validatoren vil ha referansen i fila som leser den.
 const selvtest = atom({ plugin: 'norsk-tale', key: 'selvtest' } as const, null as NorskSelvtest | null)
 // Adressen til kalibreringsriggen. Inneholder et token, så den vises bare i
 // båndet over prompten, aldri i kommandoteksten modellen leser.
 const rigg = atom({ plugin: 'norsk-tale', key: 'rigg' } as const, null as string | null)
+
+// ------------------------------------------------------------------ selvtest
+// /norsk selvtest — kort akseptansetest av den ekte veien inn i promptboksen.
+//
+// Én diktering via snarveien (ctrl+x tab, n) eller knappen: testen setter et
+// kjent prefiks i promptboksen, sjekker at teksten kom inn etter prefikset, ber
+// om ett Angre-trykk og sjekker at boksen ble prefikset igjen. Så tømmes boksen
+// og resultatet lagres. Ingen lyd lagres, og ingenting sendes inn til Claude.
+//
+// Seks-setningstesten med scoring (nektelse, tall, navn, første ord, målform,
+// stopp-tid) ligger i kalibreringsriggen: /norsk kalibrer → fanen «Selvtest».
+//
+// I samme fil som hookene: katalogen godtar at $ bare sendes til funksjoner
+// som er deklarert på toppnivå i fila som deklarerer hookene.
+
+export const PANE = 'norsk-selvtest'
+export const PREFIKS = 'TEST: '
+
+export async function aktivTest($: EngineInterface): Promise<NorskSelvtest | null> {
+  const st = await read($, selvtest)
+  return st && st.aktiv ? st : null
+}
+
+export async function startSelvtest($: EngineInterface): Promise<string> {
+  const boks = await $.prompt.read()
+  if (boks.text.trim() !== '') {
+    return 'Tøm promptboksen før selvtesten: den bruker boksen og tømmer den til slutt.'
+  }
+  await update($, selvtest, () => ({
+    aktiv: true, steg: 'dikter' as const, innsetting: null, angre: null, fil: null, avbrutt: false, lagringsfeil: null,
+  }))
+  await $.prompt.fill({ text: PREFIKS, mode: 'replace' })
+  return 'Selvtest startet: én diktering. Trykk ctrl+x tab og så n (eller 🎙 Norsk), si en kort setning og vent. '
+    + 'Trykk deretter Angre (a). Ikke trykk Enter: ingenting sendes inn.'
+}
+
+// Kalles etter hver vellykkede innsetting. Returnerer true når den ble målt.
+export async function etterInnsetting($: EngineInterface): Promise<boolean> {
+  const st = await aktivTest($)
+  if (!st || st.steg !== 'dikter') return false
+  const boks = (await $.prompt.read()).text
+  const tekst = boks.startsWith(PREFIKS) ? boks.slice(PREFIKS.length).trim() : ''
+  const ok = boks.startsWith(PREFIKS) && tekst !== ''
+  await update($, selvtest, x => (x ? { ...x, steg: 'angre' as const, innsetting: { ok, boks, tekst } } : x))
+  return true
+}
+
+// Kalles etter Angre. Returnerer true når Angre-steget ble målt.
+export async function etterAngre($: EngineInterface): Promise<boolean> {
+  const st = await aktivTest($)
+  if (!st || st.steg !== 'angre') return false
+  const faktisk = (await $.prompt.read()).text
+  await update($, selvtest, x => (x ? { ...x, angre: { ok: faktisk === PREFIKS, forventet: PREFIKS, faktisk } } : x))
+  await avslutt($, false)
+  return true
+}
+
+// Opptaksmappa: userConfig «opptak», ellers NORSK_TALE_OPPTAK, ellers ~/norsk-tale-opptak.
+let opptakValg = ''
+export function settOpptaksmappe(v: string) { opptakValg = v }
+
+export async function opptaksmappe($: EngineInterface): Promise<string> {
+  const home = (await $.env.get('HOME')) ?? ''
+  const valgt = opptakValg || (await $.env.get('NORSK_TALE_OPPTAK')) || `${home}/norsk-tale-opptak`
+  return valgt.startsWith('~/') ? home + valgt.slice(1) : valgt
+}
+
+// Et eksternt volum som ikke er montert, skal stoppe skrivingen: $.fs.write ville
+// ellers opprettet mappa under /Volumes på intern disk.
+async function montert($: EngineInterface, mappe: string): Promise<string | null> {
+  try {
+    const r = await $.process.run(['python3', '-I', `${$.plugin.root}/kjerne/kjerne.py`, '--krev-montert', mappe], { timeoutMs: 15000 })
+    return r.exitCode === 0 ? null : (r.stderr.trim() || 'Opptaksmappa er ikke tilgjengelig.')
+  } catch (feil) {
+    return `Kunne ikke sjekke opptaksmappa: ${String(feil)}`
+  }
+}
+
+export async function avslutt($: EngineInterface, avbrutt: boolean): Promise<string> {
+  const st = await read($, selvtest)
+  if (!st) return 'Ingen selvtest å avslutte.'
+  await $.prompt.fill({ text: '', mode: 'replace' })
+  const mappe = await opptaksmappe($)
+  const stempel = new Date(await $.clock.now()).toISOString().replace(/[:]/g, '').replace(/\..*$/, '')
+  const lagringsfeil = await montert($, mappe)
+  const fil = lagringsfeil ? null : `${mappe}/selvtest-claude-${stempel}.json`
+  const ferdig: NorskSelvtest = { ...st, aktiv: false, steg: 'ferdig', avbrutt, fil, lagringsfeil }
+  const rapport = {
+    norsk_tale_selvtest: 2, kilde: 'claude-code', tidspunkt: new Date(await $.clock.now()).toISOString(), avbrutt,
+    oppsummering: oppsummer(ferdig), innsetting: ferdig.innsetting, angre: ferdig.angre,
+    merknad: 'Ingen lyd er lagret. Seks-setningstesten med scoring kjøres i kalibreringsriggen (/norsk kalibrer → Selvtest).',
+  }
+  if (fil) await $.fs.write(fil, JSON.stringify(rapport, null, 2) + '\n')
+  await update($, selvtest, () => ferdig)
+  await $.ui.open({ id: PANE, title: 'norsk-tale selvtest' })
+  const hvor = fil ? `Resultat: ${fil}` : `Resultatet ble IKKE lagret: ${lagringsfeil}`
+  return avbrutt ? `Selvtesten ble avbrutt. ${hvor}` : `Selvtest ferdig. ${hvor}`
+}
+
+export type Oppsummering = { bestatt: number; sjekker: number }
+
+export function oppsummer(st: NorskSelvtest): Oppsummering {
+  const sjekk = [st.innsetting?.ok, st.angre?.ok].filter(x => x !== undefined)
+  return { bestatt: sjekk.filter(Boolean).length, sjekker: sjekk.length }
+}
+
+const merke = (ok: boolean) => (ok ? '✔' : '✘')
+
+// Tabellen som linjer, felles for panelet og testene.
+export function tabell(st: NorskSelvtest): string[] {
+  const o = oppsummer(st)
+  const ut = [`${st.avbrutt ? 'Avbrutt' : 'Ferdig'}: ${o.bestatt} av ${o.sjekker} sjekker bestått.`]
+  if (st.innsetting) {
+    ut.push(`Innsetting etter prefikset ${merke(st.innsetting.ok)}  boksen var «${st.innsetting.boks}»`)
+  }
+  if (st.angre) ut.push(`Angre ${merke(st.angre.ok)}  forventet «${st.angre.forventet}», fikk «${st.angre.faktisk}»`)
+  if (st.fil) ut.push(`Lagret: ${st.fil}`)
+  if (st.lagringsfeil) ut.push(`Ikke lagret: ${st.lagringsfeil}`)
+  return ut
+}
+
+// --------------------------------------------------------------- diktering
 
 type Resultat = {
   verbatim: string
@@ -101,8 +218,8 @@ async function kommando($: EngineInterface, ord: string) {
   await $.fs.write(`${kontroll}/${lopenr}.cmd`, ord)
 }
 
-async function settInn($: EngineInterface, h: { slutt: string; resultat: Resultat }) {
-  const r = h.resultat
+async function settInn($: EngineInterface, hd: { slutt: string; resultat: Resultat }) {
+  const r = hd.resultat
   // Kjernen gir én linje per whisper-segment; i promptboksen er det løpende tekst.
   const tekst = r.korrigert.replace(/\s*\n\s*/g, ' ').trim()
   if (!tekst) {
@@ -124,8 +241,8 @@ async function settInn($: EngineInterface, h: { slutt: string; resultat: Resulta
   }
 }
 
-async function hendelse($: EngineInterface, h: Hendelse) {
-  switch (h.type) {
+async function hendelse($: EngineInterface, hd: Hendelse) {
+  switch (hd.type) {
     case 'oppe':
     case 'modell_klar':
     case 'frigjort':
@@ -146,11 +263,11 @@ async function hendelse($: EngineInterface, h: Hendelse) {
       return
     case 'feil':
       await update($, laster, () => false)
-      await sett($, 'feil', h.melding)
-      $.ui.toast(`norsk-tale: ${h.melding}`)
+      await sett($, 'feil', hd.melding)
+      $.ui.toast(`norsk-tale: ${hd.melding}`)
       return
     case 'tekst':
-      return settInn($, h)
+      return settInn($, hd)
   }
 }
 
@@ -264,13 +381,13 @@ async function startRigg($: EngineInterface): Promise<string> {
           const linje = rest.slice(0, i).trim()
           rest = rest.slice(i + 1)
           i = rest.indexOf('\n')
-          let h: { type?: string; url?: string } = {}
-          try { h = JSON.parse(linje) } catch { continue }
-          if (h.type === 'feil') {
-            await sett($, 'feil', `Kalibreringsriggen startet ikke: ${(h as { melding?: string }).melding ?? 'ukjent feil'}`)
+          let svar: { type?: string; url?: string; melding?: string } = {}
+          try { svar = JSON.parse(linje) } catch { continue }
+          if (svar.type === 'feil') {
+            await sett($, 'feil', `Kalibreringsriggen startet ikke: ${svar.melding ?? 'ukjent feil'}`)
           }
-          if (h.type === 'klar' && h.url) {
-            const url = h.url
+          if (svar.type === 'klar' && svar.url) {
+            const url = svar.url
             await update($, rigg, () => url)
             const apnet = await aapneNettleser($, url)
             $.ui.toast(apnet ? 'norsk-tale: kalibreringsriggen er åpnet i nettleseren.'

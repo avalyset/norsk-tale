@@ -3,6 +3,17 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
+## [0.1.1] – 2026-10-19
+
+### Endret
+
+- Modden ligger nå i én fil (`hooks/register.tsx`), og en parameter er ikke lenger
+  kalt `h`. Det er for at katalogens statiske analyse skal kunne følge kallene på
+  `$`. Oppførselen er uendret.
+- `modellvalg` er fritekst i innstillingene. Ugyldige verdier gir fortsatt en
+  tydelig feilmelding fra kjernen.
+- README har fått avsnittet «Hva pluginen kjører, skriver og leser».
+
 ## [0.1.0] – 2026-10-19
 
 ### Lagt til
@@ -47,4 +58,5 @@ versjonene følger semantisk versjonering.
 - Målformkrysset (nb mot nn) og de øvrige testsettene (NST, NPSC, NB Samtale) er
   fase 2 og ikke kjørt.
 
+[0.1.1]: https://github.com/avalyset/norsk-tale/releases/tag/v0.1.1
 [0.1.0]: https://github.com/avalyset/norsk-tale/releases/tag/v0.1.0

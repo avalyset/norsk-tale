@@ -14,7 +14,7 @@ Pluginen har tre deler:
   vokabular som whisper-prompt, og en fasittabell som retter kjente feilstavinger av
   etater uten å bruke noen språkmodell.
 
-Versjon 0.1.0 (2026-10-19), arkivert på Zenodo:
+Versjon 0.1.1 (2026-10-19), arkivert på Zenodo:
 [10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248) (alle versjoner;
 v0.1.0 er [10.5281/zenodo.23473249](https://doi.org/10.5281/zenodo.23473249)).
 Endringer står i [CHANGELOG.md](CHANGELOG.md), og beslutningene med begrunnelse i
@@ -303,6 +303,46 @@ samme tekst i tre kjøringer av samme fil. Se
   Anthropic. Den innebygde dikteringen sender opptaket til Anthropics servere for
   transkripsjon og krever en claude.ai-konto
   ([dokumentasjon](https://code.claude.com/docs/en/voice-dictation)).
+
+## Hva pluginen kjører, skriver og leser
+
+**Programmer modden starter**, alle lokalt og bare når du ber om det:
+
+- `python3 -I <plugin>/lytter/norsk_lytter.py` ved første trykk på «🎙 Norsk». Lytteren
+  tar opp fra mikrofonen med `ffmpeg` og transkriberer med `whisper-server` (hvis den
+  finnes) eller `whisper-cli`.
+- `python3 -I <plugin>/kjerne/kjerne.py --sjekk` for `/norsk oppsett`, og
+  `kjerne.py --krev-montert <mappe>` for å sjekke at opptaksmappa er montert før
+  selvtesten lagrer.
+- `python3 -I <plugin>/kalibrering/rigg.py` for `/norsk kalibrer`, og `open` (macOS)
+  eller `xdg-open` (Linux) med riggens adresse, så den åpnes i nettleseren.
+
+Skillen `transkriber` kjører `python3 -I <plugin>/kjerne/kjerne.py` på lydfila du
+peker på.
+
+**Filer modden skriver:**
+
+- Kommandofiler i `$TMPDIR/norsk-tale-<økt-id>/<nr>.cmd` med ett ord (`start`,
+  `stopp` eller `avslutt`). Lytteren er den eneste som leser dem, og den sletter dem.
+- Selvtestresultatet `selvtest-claude-<tidspunkt>.json` i opptaksmappa.
+
+Modden skriver ingen bygge-, oppstarts-, innstillings- eller instruksjonsfiler.
+
+**Det modden leser og sender:** Den leser teksten i promptboksen for å sette inn
+dikteringen ved markøren, for Angre og for selvtestens sjekk. Den sender aldri inn
+prompten og sender ingenting ut av maskinen. Den eneste nettverkstrafikken er
+loopback (`127.0.0.1`): til `whisper-server` og mellom nettleseren og riggen. Teksten
+går til Claude først når du selv sender prompten. Pluginen leser ingen
+legitimasjon. `huggingface.co` og `~/.claude.json` nevnes i denne README-en bare
+som dokumentasjon. Pluginen kontakter ikke Hugging Face og leser ikke fila.
+
+**Hookene:**
+
+- `prompt.submit` stopper Enter mens selvtesten pågår, så ingenting sendes inn.
+  Ellers nullstiller den Angre-tilstanden og sender prompten videre uendret.
+- `command.run` svarer på `/norsk`.
+- `ui.render` tegner båndet over prompten og selvtestpanelet.
+- `session.start` registrerer kommandoen, og `session.end` stopper lytteren.
 
 ## Personvern
 

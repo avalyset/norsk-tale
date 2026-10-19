@@ -1,7 +1,7 @@
 {
   "name": "norsk-tale",
   "displayName": "Norsk tale",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Lokal norsk diktering i Claude Code med NB-Whisper og whisper.cpp. Lyden forlater ikke maskinen.",
   "author": {
     "name": "Eirik Botten Nicolaysen, EcoDeco AS",
@@ -28,12 +28,7 @@
     "modellvalg": {
       "type": "string",
       "title": "NB-Whisper-modell",
-      "description": "Hvilken NbAiLab/nb-whisper-modell som brukes: large (3,10 GB), medium (1,53 GB) eller small (0,49 GB).",
-      "options": [
-        "large",
-        "medium",
-        "small"
-      ],
+      "description": "Hvilken NbAiLab/nb-whisper-modell som brukes: large (3,10 GB), medium (1,53 GB) eller small (0,49 GB). Andre verdier gir en tydelig feilmelding.",
       "default": "large"
     },
     "malform": {
