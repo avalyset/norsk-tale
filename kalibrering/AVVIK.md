@@ -1,8 +1,9 @@
 # Avvik fra prereg-v1
 
 Preregistrering: `METHOD.md`, `manifest.json` og `reproduser.py` ved git-tagg
-`prereg-v1`. SHA256 står i `FROZEN.txt`. OSF-registrering: føres inn ved
-innsending.
+`prereg-v1`. SHA256 står i `FROZEN.txt`. OSF-registrering: rtbkz,
+https://osf.io/rtbkz/, registrert 2026-10-19T08:59:33 UTC, embargo til
+2027-04-19.
 
 Hver endring etter frysen føres her før den tas i bruk. Gjelder metode, kode,
 data, id-lister, flagg, modeller eller kjøreforhold som kan påvirke resultatet.

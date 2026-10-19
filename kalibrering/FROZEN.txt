@@ -28,4 +28,9 @@ Resultat: BYTE-IDENTISK (5/5). Bare SHA256 av utdata føres.
    («Min bestilling er godkjenningen»), uten egen faktasjekkport før frysen.
 
 ## OSF
-Registrering: (føres inn etter innsending)
+Registrering: rtbkz (Open-Ended Registration), https://osf.io/rtbkz/
+Registrert (OSF date_registered, UTC): 2026-10-19T08:59:33.829133
+Prosjekt: cbd9w (privat), https://osf.io/cbd9w/
+Embargo til 2027-04-19 (embargo_end_date 2027-04-19T00:00:00Z). Ved innsending: pending_embargo_approval = true.
+Arkiverte filer (9, SHA256 sjekket mot lokale): METHOD.md, manifest.json, FROZEN.txt, AVVIK.md, utvalg/{fleurs,nst,npsc,nb_tale,nb_samtale}.txt.
+FROZEN.txt på OSF er versjonen før denne OSF-seksjonen ble lagt til (SHA256 edef7a2c867bb01f454dd44a16d860588059c4fda448bf2e7d98bd0879fe0551).
