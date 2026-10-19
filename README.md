@@ -22,7 +22,8 @@ Pluginen har fire deler:
 
 Versjon 0.2.0 (2026-10-19), arkivert på Zenodo:
 [10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248) (alle versjoner;
-v0.1.1 er [10.5281/zenodo.23473432](https://doi.org/10.5281/zenodo.23473432), v0.1.0 er
+v0.2.0 er [10.5281/zenodo.23474380](https://doi.org/10.5281/zenodo.23474380), v0.1.1 er
+[10.5281/zenodo.23473432](https://doi.org/10.5281/zenodo.23473432) og v0.1.0 er
 [10.5281/zenodo.23473249](https://doi.org/10.5281/zenodo.23473249)).
 Endringer står i [CHANGELOG.md](CHANGELOG.md), og beslutningene med begrunnelse i
 [docs/decisions/](docs/decisions/). Se [CITATION.cff](CITATION.cff) for sitering.
