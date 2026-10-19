@@ -38,25 +38,25 @@ Samlet n = 480: WER 9,37 [8,14–10,74], CER 4,06 [3,38–4,84]. Nektelser i ref
 
 Opplest bokmålsmanus med dialektuttale. Status for kontaminering er ukjent, trolig ikke brukt (METHOD § 4).
 
-Per dialektgruppe har hver gruppe n = 40 ytringer fra 6 talere, så KI-ene er brede og gruppetallene beskrivende. Regionnavnene står i en tabell (bilde) i `02_NB_Tale_Innleseroversikt.pdf` og er ikke lest ut, så rapporten bruker gruppekodene.
+Per dialektgruppe har hver gruppe n = 40 ytringer fra 6 talere, så KI-ene er brede og gruppetallene beskrivende. Regionene er NB Tales egen inndeling: hovedspesifikasjon (fylke) og underspesifikasjon, gjengitt ordrett fra tabellen «Spesifikasjon av gruppene» i `Dokumentasjon/02_NB_Tale_Innleseroversikt.pdf`, s. 2 (versjon 2015-12-21, SHA256 `abd41362543a6631629ecdba10b52da5cd1ace5b4e5d0a2d6d8d5e0340f6de79`). Fylkesnavnene er de fra 2015. Regionnavnene er lagt til etter frysen, bare som presentasjon (*eksplorativ, ikke preregistrert*; AVVIK.md nr. 3).
 
-| Gruppe | WER [95 % KI] | CER [95 % KI] | Nektelser ref. / tapt |
-|---|---|---|---|
-| g01 | 9,00 [5,48–12,74] | 3,40 [1,96–4,94] | 1 / 0 |
-| g02 | 8,36 [4,49–12,57] | 3,66 [1,94–5,60] | 2 / 0 |
-| g03 | 10,88 [6,66–15,60] | 4,34 [2,32–6,84] | 2 / 0 |
-| g04 | 8,60 [5,20–12,62] | 3,08 [1,77–4,69] | 3 / 0 |
-| g05 | 11,81 [6,87–17,49] | 4,94 [3,03–7,13] | 3 / 0 |
-| g06 | 9,24 [5,89–12,90] | 3,61 [1,98–5,36] | 3 / 0 |
-| g07 | 7,54 [3,91–11,73] | 2,38 [1,21–3,65] | 3 / 0 |
-| g08 | 9,85 [4,19–17,20] | 7,98 [3,18–14,56] | 1 / 0 |
-| g09 | 8,47 [4,78–12,45] | 3,61 [2,02–5,26] | 3 / 0 |
-| g10 | 10,16 [6,56–13,97] | 4,09 [2,31–6,16] | 0 / 0 |
-| g11 | 9,69 [4,93–15,15] | 4,37 [1,53–8,04] | 6 / 0 |
-| g12 | 8,79 [5,38–12,25] | 3,05 [1,66–4,57] | 2 / 0 |
+| Gruppe | Region (NB Tale) | WER [95 % KI] | CER [95 % KI] | Nektelser ref. / tapt |
+|---|---|---|---|---|
+| g01 | Finnmark (+ Nord-Troms) | 9,00 [5,48–12,74] | 3,40 [1,96–4,94] | 1 / 0 |
+| g02 | Troms (+ Narvik-området i Nordland) | 8,36 [4,49–12,57] | 3,66 [1,94–5,60] | 2 / 0 |
+| g03 | Nordland: Bodø-området + Mo i Rana-området | 10,88 [6,66–15,60] | 4,34 [2,32–6,84] | 2 / 0 |
+| g04 | Nordland + Trøndelag + Møre og Romsdal: Brønnøysundområdet, Ytre Trøndelag, Nordmøre | 8,60 [5,20–12,62] | 3,08 [1,77–4,69] | 3 / 0 |
+| g05 | Trøndelag | 11,81 [6,87–17,49] | 4,94 [3,03–7,13] | 3 / 0 |
+| g06 | Møre og Romsdal: Romsdal og Sunnmøre | 9,24 [5,89–12,90] | 3,61 [1,98–5,36] | 3 / 0 |
+| g07 | Sogn og Fjordane | 7,54 [3,91–11,73] | 2,38 [1,21–3,65] | 3 / 0 |
+| g08 | Rogaland + Hordaland: hele Rogaland + hele Hordaland | 9,85 [4,19–17,20] | 7,98 [3,18–14,56] | 1 / 0 |
+| g09 | Rogaland + Hordaland: hele Rogaland + Bergensområdet av Hordaland | 8,47 [4,78–12,45] | 3,61 [2,02–5,26] | 3 / 0 |
+| g10 | Vest-Agder + Aust-Agder | 10,16 [6,56–13,97] | 4,09 [2,31–6,16] | 0 / 0 |
+| g11 | Oppland, Hedmark, Telemark, Østfold, Vestfold, Buskerud | 9,69 [4,93–15,15] | 4,37 [1,53–8,04] | 6 / 0 |
+| g12 | Oslo og Akershus | 8,79 [5,38–12,25] | 3,05 [1,66–4,57] | 2 / 0 |
 
 ## Merknader
 
-- **Rå = korrigert i alle fase-1-celler, 0 markører.** Fasittabellen (`fasit_offentlig.tsv`) har 13 målrettede feilformer for navn som Innovasjon Norge, ORCID og IIIF. Ingen av dem forekommer i FLEURS- eller NB Tale-utdata. Kontrollert per ytring i resultatfilene etter scoring (*eksplorativ kontroll, ikke preregistrert*).
+- **Rå = korrigert i alle fase-1-celler, 0 markører.** Fasittabellen (`fasit_offentlig.tsv`) har 13 målrettede feilformer for navn som Innovasjon Norge, ORCID og IIIF. Ingen av dem forekommer i FLEURS- eller NB Tale-utdata. Kontrollert per ytring i resultatfilene etter scoring (*eksplorativ, ikke preregistrert*; AVVIK.md nr. 3).
 - **Q2 (målformkryss nb mot nn) er ikke besvart i fase 1**, fordi fase 1 bare kjører nb. Krysset ligger i fase 2. Nektelsestallene over gjelder bare nb.
 - Ingen andre analyser enn METHOD § 5 er gjort.
