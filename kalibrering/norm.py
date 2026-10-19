@@ -17,9 +17,10 @@ arXiv 2402.01917 beskriver «JiWER, små bokstaver, tegnsetting fjernet», som
 passer med nostram-varianten. At akkurat denne fila ga tallene i papiret, er
 sannsynlig, ikke dokumentert.
 
-Dette er en ren standardbibliotek-port av transformene (jiwer 3.x-oppførsel:
-tegnsetting = Unicode-kategori P, fjernes uten mellomrom). Den er ikke kjørt mot
-jiwer ennå; den testen krever at jiwer installeres.
+Dette er en ren standardbibliotek-port av transformene (tegnsetting = Unicode-
+kategori P, fjernes uten mellomrom). Kryssjekket 19.10.2026 mot jiwer 4.0.0 med
+kalibrering/kryssjekk_jiwer.py: 0 normaliseringsavvik på 244 tekster, identisk
+WER og CER på 120 par.
 """
 import re
 import sys
