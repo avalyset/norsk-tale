@@ -3,6 +3,43 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
+## [0.2.0] – 2026-10-19
+
+### Lagt til
+
+- Lokal MCP-server (`mcp/server.py`, stdio), bygget med den offisielle
+  MCP-Python-SDK-en og deklarert i `.mcp.json`. Den starter alle lokale programmer:
+  lytteren (ffmpeg og whisper), kjernens oppsettsjekk, kalibreringsriggen og
+  nettleseren. Verktøyene er `transkriber_fil`, `start_opptak`, `stopp_opptak`,
+  `status`, `frigjor`, `oppsett`, `sjekk_mappe` og `start_kalibrering`.
+- `mcp/start.py` installerer SDK-en én gang i `${CLAUDE_PLUGIN_DATA}`, med låste
+  versjoner og SHA256-hasher (`mcp/krav.txt`, mcp 2.3.0).
+- Mikrofonvern: bare `transkriber_fil` er synlig for Claude. Opptaksverktøyene og
+  moddens øvrige verktøy skjules (`tool.describe`) og avvises for alle kall som ikke
+  kommer fra modden (`tool.check`, `tool.call`, `mcp.call`). Porttesten feiler uten
+  vernet.
+- `tests/test_preregistrering.py`: feiler hvis kjernen eller de frosne
+  kalibreringsfilene avviker fra SHA-ene i preregistreringen.
+- Tester for MCP-serveren, blant annet oppstart og verktøykall under
+  nettverksforbud.
+- ADR NTA-0007.
+
+### Endret
+
+- Modden starter ingen prosesser. Den kaller serveren med `$.mcp.connect` og
+  `$.mcp.call`, og kontrollkatalogen med kommandofiler er borte.
+- Skillen bruker MCP-verktøyet `transkriber_fil` i stedet for Bash.
+- `malform` er fritekst i innstillingene, som `modellvalg`. Innstillingene går til
+  serveren fra `.mcp.json`.
+- Nett brukes én gang ved installasjon (MCP-SDK), aldri under bruk. README og
+  PRIVACY er oppdatert.
+- Avsnittet om autooppdatering i testøkter er flyttet til `docs/UTVIKLING.md`.
+
+### Uendret
+
+- Kjernen (`kjerne/kjerne.py`, `kjerne/korriger.py` og vokabularfilene) er
+  byte-identisk med prereg-v1. Fase-1-resultatene gjelder fortsatt.
+
 ## [0.1.1] – 2026-10-19
 
 ### Endret
@@ -58,5 +95,6 @@ versjonene følger semantisk versjonering.
 - Målformkrysset (nb mot nn) og de øvrige testsettene (NST, NPSC, NB Samtale) er
   fase 2 og ikke kjørt.
 
+[0.2.0]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.0
 [0.1.1]: https://github.com/avalyset/norsk-tale/releases/tag/v0.1.1
 [0.1.0]: https://github.com/avalyset/norsk-tale/releases/tag/v0.1.0

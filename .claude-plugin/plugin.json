@@ -1,7 +1,7 @@
 {
   "name": "norsk-tale",
   "displayName": "Norsk tale",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Lokal norsk diktering i Claude Code med NB-Whisper og whisper.cpp. Lyden forlater ikke maskinen.",
   "author": {
     "name": "Eirik Botten Nicolaysen, EcoDeco AS",
@@ -34,12 +34,7 @@
     "malform": {
       "type": "string",
       "title": "Målform",
-      "description": "Målform whisper skal skrive: nb (bokmål, whisper -l no), nn (nynorsk, whisper -l nn) eller auto (whisper avgjør språket).",
-      "options": [
-        "nb",
-        "nn",
-        "auto"
-      ],
+      "description": "Målform whisper skal skrive: nb (bokmål, whisper -l no), nn (nynorsk, whisper -l nn) eller auto (whisper avgjør språket). Andre verdier gir en tydelig feilmelding.",
       "default": "nb"
     },
     "modell": {

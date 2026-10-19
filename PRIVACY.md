@@ -1,6 +1,6 @@
 # Personvern
 
-Gjelder norsk-tale 0.1.1.
+Gjelder norsk-tale 0.2.0.
 
 ## Kort
 
@@ -8,15 +8,19 @@ Gjelder norsk-tale 0.1.1.
   rapportering til utvikleren eller andre.
 - Lyden forlater aldri maskinen. Opptaket går fra mikrofonen via ffmpeg til
   whisper.cpp, og alt skjer lokalt.
-- Pluginen gjør ingen nettverkskall under transkripsjon. Når `whisper-server` finnes,
-  snakker lytteren med den over `127.0.0.1` (loopback), og serveren er bare bundet
-  dit. Uten `whisper-server` brukes ingen sockets. Ingenting går ut av maskinen.
+- Pluginen gjør ingen nettverkskall under bruk. Når `whisper-server` finnes, snakker
+  lytteren med den over `127.0.0.1` (loopback), og serveren er bare bundet dit.
+  Modden og pluginens MCP-server snakker over stdio, ikke over nett. Nett brukes
+  én gang ved installasjon (MCP-SDK), se under.
 
 ## Hva som skjer med lyden
 
-- Mikrofonen åpnes når du trykker «🎙 Norsk» eller skriver `/norsk`, og lukkes når
-  opptaket er ferdig: ved et nytt trykk, etter 1,5 s stillhet etter tale, eller
-  etter 2 minutter.
+- Mikrofonen åpnes når du trykker «🎙 Norsk», bruker snarveien eller skriver `/norsk`,
+  og lukkes når opptaket er ferdig: ved et nytt trykk, etter 1,5 s stillhet etter
+  tale, eller etter 2 minutter.
+- Claude kan aldri starte mikrofonen; bare ditt trykk eller din snarvei gjør det.
+  Opptaksverktøyene i pluginens MCP-server er skjult for Claude, og modden avviser
+  alle kall til dem som ikke kommer fra modden selv.
 - Opptaket skrives til en midlertidig katalog og slettes så snart transkripsjonen
   er ferdig. Blir prosessen drept midt i en transkripsjon, kan den midlertidige
   fila bli liggende i `$TMPDIR` til systemet rydder der.
@@ -37,9 +41,8 @@ innstillinger.
 
 - Innstillingene dine (modellvalg, modellsti, whisper-sti) lagres av Claude Code i
   `settings.json`.
-- Lytteren bruker en kontrollkatalog under `$TMPDIR` med små kommandofiler
-  (`start`, `stopp`, `avslutt`) som slettes etter hvert som de leses. Den tomme
-  katalogen blir liggende til systemet rydder `$TMPDIR`.
+- MCP-serveren har et Python-venv med MCP-SDK-en i pluginens datamappe
+  (`${CLAUDE_PLUGIN_DATA}`, ca. 50 MB). Det inneholder ingen data om deg.
 - Modellen ligger der du har lagt den. Standard er `~/.cache/norsk-tale/`.
 - `/norsk kalibrer` lagrer opptak (16 kHz wav), transkripsjoner og resultater i
   `~/norsk-tale-opptak/<runde>/` til du sletter dem. Siden har en slette-knapp for
@@ -53,12 +56,19 @@ innstillinger.
   konverteres i en midlertidig katalog som slettes, og lagres ikke.
 - Filene blir liggende til du sletter dem.
 
-## Nedlasting
+## Nedlasting og nett
 
-norsk-tale laster ikke ned noe. `/norsk oppsett` viser hva som mangler og hvilken
-kommando du kan kjøre selv. Installasjon av pluginen og nedlasting av modellen
-skjer over nett, men utføres av henholdsvis Claude Code og deg selv, ikke av
-pluginen under bruk.
+Nett brukes én gang ved installasjon (MCP-SDK), aldri under bruk.
+
+- Første gang pluginen starter, installerer MCP-serveren MCP-Python-SDK-en fra PyPI
+  i pluginens datamappe. Versjonene er låst med SHA256-hasher (`mcp/krav.txt`).
+  Ingenting om deg sendes med, ut over det en vanlig `pip install` sender til PyPI
+  (blant annet IP-adresse og pip-versjon).
+- Etter det gjør pluginen ingen nettverkskall. Den eneste forbindelsen er loopback
+  (`127.0.0.1`) til en lokal `whisper-server` og til kalibreringsriggen.
+- Modellen laster pluginen ikke ned. `/norsk oppsett` viser hva som mangler og
+  hvilken kommando du kan kjøre selv.
+- Installasjon av selve pluginen gjøres av Claude Code.
 
 ## Kontakt
 

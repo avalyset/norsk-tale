@@ -1,9 +1,10 @@
 // norsk-tale — lokal norsk tale-til-tekst i promptboksen.
 //
 // Tynn adapter: modden eier knappen, kommandoen og promptboksen. Mikrofon,
-// stillhet og modellens livsløp eier lytteren (lytter/norsk_lytter.py); modell,
-// SHA-sjekk og korrektur eier kjernen (kjerne/). Ingen LLM i rensingen, ingen
-// sky, og modden sender aldri inn prompten. Lytteren startes ved første trykk.
+// stillhet og modellens livsløp eier lytteren (lytter/norsk_lytter.py), som
+// kjører i pluginens MCP-server (mcp/server.py); modell, SHA-sjekk og korrektur
+// eier kjernen (kjerne/). Modden starter ingen prosesser, bruker ingen LLM i
+// rensingen og sender aldri inn prompten.
 
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
@@ -86,11 +87,11 @@ export async function opptaksmappe($: EngineInterface): Promise<string> {
 }
 
 // Et eksternt volum som ikke er montert, skal stoppe skrivingen: $.fs.write ville
-// ellers opprettet mappa under /Volumes på intern disk.
+// ellers opprettet mappa under /Volumes på intern disk. Sjekken gjøres av serveren.
 async function montert($: EngineInterface, mappe: string): Promise<string | null> {
   try {
-    const r = await $.process.run(['python3', '-I', `${$.plugin.root}/kjerne/kjerne.py`, '--krev-montert', mappe], { timeoutMs: 15000 })
-    return r.exitCode === 0 ? null : (r.stderr.trim() || 'Opptaksmappa er ikke tilgjengelig.')
+    const r = await kall($, 'sjekk_mappe', { sti: mappe })
+    return r.ok === true ? null : String(r.melding ?? 'Opptaksmappa er ikke tilgjengelig.')
   } catch (feil) {
     return `Kunne ikke sjekke opptaksmappa: ${String(feil)}`
   }
@@ -188,34 +189,66 @@ export function medMellomrom(utkast: string, markor: number, tekst: string): str
   return t
 }
 
-// Modulens egen tilstand: nullstilles ved omlasting, som lytterprosessen.
-let modellvalg = 'large'
-let modell = ''
-let whisper = ''
-let malform = 'nb'
-let kontroll: string | undefined
-let lopenr = 0
-let lever = false
-let riggLever = false
+// ---------------------------------------------------------------- MCP-serveren
+// All oppstart av lokale programmer skjer i pluginens MCP-server (mcp/server.py,
+// .mcp.json; docs/decisions/NTA-0007). Modden starter ingen prosesser selv: den
+// kaller serveren med $.mcp.connect og $.mcp.call.
+export const SERVERNOKKEL = 'norsk-tale'
+// Verktøyene som bare modden får kalle. Modellen ser og får kalle bare
+// transkriber_fil (en lydfil brukeren peker på). Claude kan aldri starte mikrofonen.
+export const BARE_MODDEN = ['start_opptak', 'stopp_opptak', 'status', 'frigjor', 'oppsett', 'sjekk_mappe',
+  'start_kalibrering'] as const
+export const AVVIST = 'norsk-tale: verktøyet brukes bare av pluginens knapp og kommandoer. '
+  + 'Claude kan aldri starte mikrofonen; bare brukerens trykk eller snarvei gjør det.'
+const SLUTT = new Set(['tekst', 'tom', 'feil'])
+
+// Navnet modellen og hookene ser: mcp__plugin_norsk-tale_norsk-tale__<verktøy>.
+export function bareForModden(navn: string): boolean {
+  const m = /^mcp__.*norsk[-_]tale.*__([a-z_]+)$/.exec(navn)
+  return m !== null && (BARE_MODDEN as readonly string[]).includes(m[1] ?? '')
+}
+
+// Serverens navn i $.mcp.call, slik $.mcp.connect oppgir det («plugin:norsk-tale:norsk-tale»).
+export function erVarServer(navn: string): boolean {
+  return /norsk[-_]tale/.test(navn)
+}
+
+// Modulens egen tilstand: nullstilles ved omlasting.
+let server: string | null = null
+let folger = false
 
 async function sett($: EngineInterface, s: NorskStatus, m: string | null = null) {
   await update($, status, () => s)
   await update($, melding, () => m)
 }
 
-// Kontrollkatalogen er per økt og bestemmes ved første behov.
-async function sikreKontroll($: EngineInterface): Promise<string> {
-  if (!kontroll) {
-    const tmp = (await $.env.get('TMPDIR')) ?? '/tmp'
-    kontroll = `${tmp.replace(/\/$/, '')}/norsk-tale-${await $.session.id()}`
-  }
-  return kontroll
+async function kobleTil($: EngineInterface): Promise<string> {
+  if (server) return server
+  const r = await $.mcp.connect(SERVERNOKKEL)
+  if (!r.isConnected) throw new Error(r.message)
+  server = r.server
+  return r.server
 }
 
-async function kommando($: EngineInterface, ord: string) {
-  if (!kontroll) return
-  lopenr += 1
-  await $.fs.write(`${kontroll}/${lopenr}.cmd`, ord)
+// Ett verktøykall. Serveren svarer med et objekt: som structuredContent og som
+// JSON i en tekstblokk. structuredContent leses først; en innpakket «result»
+// (en verdi SDK-en pakket inn) pakkes ut.
+async function kall($: EngineInterface, verktoy: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+  const navn = await kobleTil($)
+  const r = await $.mcp.call(navn, verktoy, args)
+  const tekst = r.content.map(b => (typeof b.text === 'string' ? b.text : '')).join('')
+  if (r.isError) throw new Error(tekst || `${verktoy} feilet`)
+  return tolkSvar(r.structuredContent, tekst)
+}
+
+export function tolkSvar(strukturert: unknown, tekst: string): Record<string, unknown> {
+  if (strukturert && typeof strukturert === 'object') {
+    const o = strukturert as Record<string, unknown>
+    if (typeof o.result === 'string' && Object.keys(o).length === 1) return JSON.parse(o.result) as Record<string, unknown>
+    if (o.result && typeof o.result === 'object' && Object.keys(o).length === 1) return o.result as Record<string, unknown>
+    return o
+  }
+  return JSON.parse(tekst) as Record<string, unknown>
 }
 
 async function settInn($: EngineInterface, hd: { slutt: string; resultat: Resultat }) {
@@ -271,141 +304,92 @@ async function hendelse($: EngineInterface, hd: Hendelse) {
   }
 }
 
-// En linje lytteren skrev som ikke er JSON, blir en feil i stedet for å drepe løkka.
-function tolk(linje: string): Hendelse {
+// Følger ett opptak: henter lytterens hendelser fra serveren til opptaket er
+// ferdig (tekst, tom eller feil). Høyst 30 minutter.
+async function folgOpptak($: EngineInterface, etter: number) {
+  if (folger) return
+  folger = true
+  let nr = etter
   try {
-    return JSON.parse(linje) as Hendelse
-  } catch {
-    return { type: 'feil', melding: `Uventet utdata fra lytteren: ${linje.slice(0, 200)}` }
-  }
-}
-
-async function startLytter($: EngineInterface) {
-  if (lever) return
-  lever = true
-  const kontroll = await sikreKontroll($)
-  const argv = ['python3', '-I', `${$.plugin.root}/lytter/norsk_lytter.py`,
-    '--kontroll', kontroll, ...konfigArgv()]
-  void (async () => {
-    let rest = ''
-    try {
-      for await (const { stream, text } of $.process.spawn({ argv })) {
-        if (stream !== 'stdout') continue
-        rest += text
-        let i = rest.indexOf('\n')
-        while (i >= 0) {
-          const linje = rest.slice(0, i).trim()
-          rest = rest.slice(i + 1)
-          if (linje) await hendelse($, tolk(linje))
-          i = rest.indexOf('\n')
-        }
+    for (let runde = 0; runde < 12000; runde += 1) {
+      await $.clock.sleep(150)
+      const st = await kall($, 'status', { etter: nr })
+      for (const h of (st.hendelser as (Hendelse & { nr: number })[])) {
+        nr = h.nr
+        await hendelse($, h)
+        if (SLUTT.has(h.type)) return
       }
-    } catch (feil) {
-      await sett($, 'feil', `Lytteren kunne ikke startes (python3): ${String(feil)}`)
-    } finally {
-      lever = false
     }
-    const s = await read($, status)
-    // Et trykk som kom mens en lytter var på vei ned: kommandofila ligger
-    // igjen i kontrollkatalogen, og den nye lytteren leser den.
-    if (s === 'starter') await startLytter($)
-    else if (s === 'lytter' || s === 'tale' || s === 'behandler') {
-      await sett($, 'feil', 'Lytteren stoppet uventet.')
-    }
-  })().catch(() => {
-    // Modulen ble lastet ut (omlasting, øktslutt) mens løkka gikk: da er
-    // tilstanden ikke lenger vår å skrive, og lytteren er drept med den.
-  })
+  } catch (feil) {
+    await sett($, 'feil', `MCP-serveren svarte ikke: ${String(feil)}`)
+  } finally {
+    folger = false
+  }
 }
 
 async function veksle($: EngineInterface): Promise<string> {
   const s = await read($, status)
   if (s === 'lytter' || s === 'tale' || s === 'starter') {
-    await kommando($, 'stopp')
+    try {
+      await kall($, 'stopp_opptak')
+    } catch (feil) {
+      await sett($, 'feil', `Kunne ikke stoppe opptaket: ${String(feil)}`)
+    }
     return 'Stopper opptaket.'
   }
   if (s === 'behandler') return 'Transkriberer fortsatt.'
   const st = await read($, selvtest)
   if (st && !st.aktiv) await update($, selvtest, () => null)   // gammel oppsummering bort
-  await startLytter($)
   await sett($, 'starter')
-  await kommando($, 'start')
+  try {
+    const r = await kall($, 'start_opptak')
+    void folgOpptak($, Number(r.etter ?? 0)).catch(() => {
+      // Modulen ble lastet ut (omlasting, øktslutt) mens løkka gikk.
+    })
+  } catch (feil) {
+    await sett($, 'feil', `Lytteren kunne ikke startes: ${String(feil)}`)
+    return 'Lytteren kunne ikke startes.'
+  }
   return 'Lytter på norsk. Trykk igjen, eller 1,5 s stillhet, for å stoppe.'
 }
 
-// userConfig til kjernen, likt for lytteren og /norsk oppsett.
-function konfigArgv(): string[] {
-  return ['--modellvalg', modellvalg, '--modell', modell, '--whisper', whisper, '--malform', malform]
-}
-
 async function oppsett($: EngineInterface): Promise<string> {
-  const argv = ['python3', '-I', `${$.plugin.root}/kjerne/kjerne.py`, '--sjekk', ...konfigArgv()]
   try {
-    const r = await $.process.run(argv, { timeoutMs: 120000 })
-    const rapport = JSON.parse(r.stdout) as { melding: string }
-    return rapport.melding
+    const r = await kall($, 'oppsett')
+    return String(r.melding ?? 'Oppsettsjekken ga ikke noe svar.')
   } catch (feil) {
-    return `Oppsettsjekken kunne ikke kjøres (python3): ${String(feil)}`
+    return `Oppsettsjekken kunne ikke kjøres: ${String(feil)}`
   }
 }
 
-async function aapneNettleser($: EngineInterface, url: string): Promise<boolean> {
-  for (const argv of [['open', url], ['xdg-open', url]]) {
-    try {
-      const r = await $.process.run(argv, { timeoutMs: 10000 })
-      if (r.exitCode === 0) return true
-    } catch {
-      // prøv neste
-    }
+async function frigjor($: EngineInterface): Promise<string> {
+  try {
+    await kall($, 'frigjor')
+  } catch (feil) {
+    return `Kunne ikke frigjøre modellen: ${String(feil)}`
   }
-  return false
+  await sett($, 'av')
+  return 'Lytteren er stoppet og modellen frigjort.'
 }
 
 async function startRigg($: EngineInterface): Promise<string> {
-  if (riggLever) {
-    const url = await read($, rigg)
-    if (url) await aapneNettleser($, url)
-    return 'Kalibreringsriggen kjører allerede. Adressen står over prompten.'
+  let r: Record<string, unknown>
+  try {
+    r = await kall($, 'start_kalibrering')
+  } catch (feil) {
+    await sett($, 'feil', `Kalibreringsriggen kunne ikke startes: ${String(feil)}`)
+    return 'Kalibreringsriggen kunne ikke startes.'
   }
-  riggLever = true
-  const argv = ['python3', '-I', `${$.plugin.root}/kalibrering/rigg.py`,
-    '--modellvalg', modellvalg, '--modell', modell, '--whisper', whisper, '--opptak', await opptaksmappe($)]
-  void (async () => {
-    let rest = ''
-    try {
-      for await (const { stream, text } of $.process.spawn({ argv })) {
-        if (stream !== 'stdout') continue
-        rest += text
-        let i = rest.indexOf('\n')
-        while (i >= 0) {
-          const linje = rest.slice(0, i).trim()
-          rest = rest.slice(i + 1)
-          i = rest.indexOf('\n')
-          let svar: { type?: string; url?: string; melding?: string } = {}
-          try { svar = JSON.parse(linje) } catch { continue }
-          if (svar.type === 'feil') {
-            await sett($, 'feil', `Kalibreringsriggen startet ikke: ${svar.melding ?? 'ukjent feil'}`)
-          }
-          if (svar.type === 'klar' && svar.url) {
-            const url = svar.url
-            await update($, rigg, () => url)
-            const apnet = await aapneNettleser($, url)
-            $.ui.toast(apnet ? 'norsk-tale: kalibreringsriggen er åpnet i nettleseren.'
-              : 'norsk-tale: åpne adressen over prompten i nettleseren.')
-          }
-        }
-      }
-    } catch (feil) {
-      await sett($, 'feil', `Kalibreringsriggen kunne ikke startes (python3): ${String(feil)}`)
-    } finally {
-      riggLever = false
-    }
-    await update($, rigg, () => null)
-  })().catch(() => {
-    // modulen ble lastet ut; riggen stoppes med den
-  })
-  return 'Starter kalibreringsriggen. Den åpnes i nettleseren, og adressen står over prompten. '
-    + 'Alt skjer på denne maskinen.'
+  if (typeof r.url !== 'string') {
+    await sett($, 'feil', `Kalibreringsriggen startet ikke: ${String(r.feil ?? 'ukjent feil')}`)
+    return 'Kalibreringsriggen startet ikke.'
+  }
+  const url = r.url
+  await update($, rigg, () => url)
+  $.ui.toast(r.apnet ? 'norsk-tale: kalibreringsriggen er åpnet i nettleseren.'
+    : 'norsk-tale: åpne adressen over prompten i nettleseren.')
+  return r.allerede ? 'Kalibreringsriggen kjører allerede. Adressen står over prompten.'
+    : 'Starter kalibreringsriggen. Den åpnes i nettleseren, og adressen står over prompten. Alt skjer på denne maskinen.'
 }
 
 async function angreNa($: EngineInterface): Promise<string> {
@@ -418,10 +402,6 @@ async function angreNa($: EngineInterface): Promise<string> {
 }
 
 export const register: Register = (on, options) => {
-  modellvalg = String(options.modellvalg ?? 'large')
-  modell = String(options.modell ?? '')
-  whisper = String(options.whisper ?? '')
-  malform = String(options.malform ?? 'nb')
   settOpptaksmappe(String(options.opptak ?? ''))
 
   on('session.start', async ($, e, next) => {
@@ -448,17 +428,35 @@ export const register: Register = (on, options) => {
       await update($, angre, () => null)
       return { text: await avslutt($, true) }
     }
-    if (arg === 'av') {
-      await kommando($, 'avslutt')
-      await sett($, 'av')
-      return { text: 'Lytteren er stoppet og modellen frigjort.' }
-    }
+    if (arg === 'av') return { text: await frigjor($) }
     if (arg !== '') return { text: `Ukjent argument «${arg}». Bruk /norsk, /norsk angre, /norsk av, /norsk oppsett, /norsk selvtest eller /norsk kalibrer.` }
     return { text: await veksle($) }
   })
 
-  on('session.end', async ($, e, next) => {
-    if (lever) await kommando($, 'avslutt')
+  // Mikrofonvern: verktøyene som kan åpne mikrofonen (og resten av moddens egne)
+  // skjules for Claude og avvises for alle kall som ikke kommer fra denne modden.
+  // Modellens egne kall har next.origin.plugin === 'engine'.
+  on('tool.describe', async ($, e, next) => {
+    if (!bareForModden(e.tool)) return next(e)
+    return { description: 'Ikke tilgjengelig for Claude: brukes bare av norsk-tale-modden etter brukerens trykk.',
+      isDeferred: true }
+  })
+
+  on('tool.check', async ($, e, next) => {
+    if (bareForModden(e.tool) && next.origin.plugin !== 'norsk-tale') return { decision: 'deny', reason: AVVIST }
+    return next(e)
+  })
+
+  on('tool.call', async ($, e, next) => {
+    if (bareForModden(e.tool) && next.origin.plugin !== 'norsk-tale') return { deny: AVVIST }
+    return next(e)
+  })
+
+  on('mcp.call', async ($, e, next) => {
+    const bare = (BARE_MODDEN as readonly string[]).includes(e.tool)
+    if (bare && erVarServer(e.server) && next.origin.plugin !== 'norsk-tale') {
+      return { deny: AVVIST }
+    }
     return next(e)
   })
 

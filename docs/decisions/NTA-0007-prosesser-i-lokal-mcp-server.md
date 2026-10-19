@@ -1,6 +1,6 @@
 # NTA-0007: All oppstart av lokale programmer i én deklarert lokal MCP-server
 
-*Skrevet før implementeringen, 2026-10-19. Gjelder fra versjon 0.2.0.*
+*Skrevet før implementeringen, 2026-10-19. Gjelder fra versjon 0.2.0. Status: implementert i v0.2.0.*
 
 ## Kontekst
 

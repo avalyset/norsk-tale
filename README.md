@@ -6,15 +6,21 @@ gjøres av [NB-Whisper](https://huggingface.co/NbAiLab/nb-whisper-large) fra
 Nasjonalbiblioteket, kjørt med [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
 på din egen maskin. Lyden forlater ikke maskinen.
 
-Pluginen har tre deler:
+Pluginen har fire deler:
 
 - **Knappen og `/norsk`** (en mod) for diktering inn i promptboksen.
 - **Skillen `transkriber`**, som lar Claude transkribere en lydfil du peker på.
+- **MCP-serveren** (`mcp/`), en lokal stdio-server bygget med den offisielle
+  MCP-Python-SDK-en. Den starter alle lokale programmer. Modden og skillen starter
+  ingen prosesser selv ([NTA-0007](docs/decisions/NTA-0007-prosesser-i-lokal-mcp-server.md)).
 - **Kjernen** (`kjerne/`): whisper.cpp med språket låst til norsk, et offentlig
   vokabular som whisper-prompt, og en fasittabell som retter kjente feilstavinger av
   etater uten å bruke noen språkmodell.
 
-Versjon 0.1.1 (2026-10-19), arkivert på Zenodo:
+**Claude kan aldri starte mikrofonen; bare ditt trykk eller din snarvei gjør det.**
+**Nett brukes én gang ved installasjon (MCP-SDK), aldri under bruk.**
+
+Versjon 0.2.0 (2026-10-19), arkivert på Zenodo:
 [10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248) (alle versjoner;
 v0.1.1 er [10.5281/zenodo.23473432](https://doi.org/10.5281/zenodo.23473432), v0.1.0 er
 [10.5281/zenodo.23473249](https://doi.org/10.5281/zenodo.23473249)).
@@ -24,14 +30,18 @@ Endringer står i [CHANGELOG.md](CHANGELOG.md), og beslutningene med begrunnelse
 ## Krav
 
 - Claude Code v2.1.287 eller nyere (testet med 2.1.303)
-- Python 3 og ffmpeg på PATH
+- Python 3.10 eller nyere og ffmpeg på PATH
+- Nett én gang, første gang pluginen starter. MCP-serveren installerer da
+  MCP-Python-SDK-en (mcp 2.3.0 med avhengigheter, låst med SHA256-hasher i
+  `mcp/krav.txt`; 28 pakker og ca. 50 MB på macOS med Python 3.14) i pluginens
+  datamappe (`${CLAUDE_PLUGIN_DATA}`)
 - whisper.cpp med `whisper-cli`. `whisper-server` er valgfri: med den holdes modellen
   lastet mellom opptakene, uten den lastes modellen for hvert opptak
 - En NB-Whisper-modell i ggml-format (large, medium eller small)
 
 | Plattform | Status |
 |---|---|
-| macOS | Utviklet på macOS 27.0.1, Apple M1 Pro, Python 3.14.8, ffmpeg 9.0.1 og whisper.cpp 1.9.2 bygget fra kilde (Metal). Livetest 2026-10-19 i Claude Code 2.1.303: en ekte FLEURS-ytring ble spilt gjennom høyttaleren inn i mikrofonen, dikteringen ble startet med snarveien, teksten kom inn riktig, og Angre virket. **Opplesning av et menneske i sanntid er ikke testet automatisk.** |
+| macOS | Utviklet på macOS 27.0.1, Apple M1 Pro, Python 3.14.8, ffmpeg 9.0.1 og whisper.cpp 1.9.2 bygget fra kilde (Metal). Livetest 2026-10-19 i Claude Code 2.1.303, også med MCP-serveren i v0.2.0: en ekte FLEURS-ytring ble spilt gjennom høyttaleren inn i mikrofonen, dikteringen ble startet med snarveien, teksten kom inn riktig, og Angre virket. **Opplesning av et menneske i sanntid er ikke testet automatisk.** |
 | whisper.cpp fra Homebrew | Ikke testet. Formelen (1.9.5 da dette ble skrevet) bygger ikke `whisper-server`, så dikteringen bruker `whisper-cli` og laster modellen for hvert opptak |
 | Windows, Linux | Ikke testet |
 
@@ -49,6 +59,12 @@ Svar `y` for å legge til markedsplassen, og velg deretter omfang.
 
 Kjør `/norsk oppsett`. Kommandoen sjekker ffmpeg, whisper.cpp og modellen, og sier
 hva som mangler. Den laster ikke ned noe.
+
+Første gang Claude Code starter pluginen, lager MCP-serveren et Python-venv i
+pluginens datamappe og installerer MCP-SDK-en der med
+`pip install --require-hashes --only-binary :all:`. Det tar under et halvt minutt
+og er den eneste gangen pluginen bruker nett. Senere starter serveren rett fra
+venvet, og blir låsefila endret, lages et nytt venv ved siden av det gamle.
 
 På macOS installerer du verktøyene med:
 
@@ -191,8 +207,8 @@ kjørt.
 - **Skrivemåter** korrektoren ikke har lov til å avgjøre, vises som
   `⟦feilform → forslag?⟧`. Da velger du selv.
 - **Skillen:** be Claude om å transkribere en lydfil, for eksempel «transkriber
-  ~/Opptak/møte.m4a». Den bruker den samme kjernen. Hvert kall laster modellen på
-  nytt.
+  ~/Opptak/møte.m4a». Claude bruker da MCP-verktøyet `transkriber_fil`, som kjører
+  den samme kjernen. Hvert kall laster modellen på nytt.
 
 ## Sjekk at det virker: `/norsk selvtest`
 
@@ -294,6 +310,10 @@ enn tre talere «for få».
 
 ## Kjente begrensninger
 
+MCP-serveren er en Python-prosess som kjører hele økten mens pluginen er aktiv.
+Modellen lastes likevel først ved første opptak. Første oppstart krever nett for å
+installere MCP-SDK-en; uten nett starter serveren ikke første gang.
+
 Chrome spør om mikrofontilgang hver gang `/norsk kalibrer` startes, fordi riggen
 får en tilfeldig port og tillatelsen gjelder per port.
 
@@ -319,34 +339,45 @@ samme tekst i tre kjøringer av samme fil. Se
 
 ## Hva pluginen kjører, skriver og leser
 
-**Programmer modden starter**, alle lokalt og bare når du ber om det:
+**Programmer:** alle lokale programmer startes av pluginens MCP-server, aldri av
+modden eller skillen. Claude Code starter serveren selv fra `.mcp.json` med
+`python3 -I <plugin>/mcp/start.py`, og den kjører så lenge pluginen er aktiv i
+økten. Serveren starter:
 
-- `python3 -I <plugin>/lytter/norsk_lytter.py` ved første trykk på «🎙 Norsk». Lytteren
-  tar opp fra mikrofonen med `ffmpeg` og transkriberer med `whisper-server` (hvis den
-  finnes) eller `whisper-cli`.
-- `python3 -I <plugin>/kjerne/kjerne.py --sjekk` for `/norsk oppsett`, og
-  `kjerne.py --krev-montert <mappe>` for å sjekke at opptaksmappa er montert før
-  selvtesten lagrer.
-- `python3 -I <plugin>/kalibrering/rigg.py` for `/norsk kalibrer`, og `open` (macOS)
-  eller `xdg-open` (Linux) med riggens adresse, så den åpnes i nettleseren.
+- `pip` én gang, for å installere MCP-SDK-en (se [Krav](#krav))
+- lytteren, som tar opp fra mikrofonen med `ffmpeg` og transkriberer med
+  `whisper-server` (hvis den finnes) eller `whisper-cli`, når du trykker
+- `whisper-cli` for skillens `transkriber_fil`
+- kjernens oppsettsjekk for `/norsk oppsett`
+- kalibreringsriggen (`kalibrering/rigg.py`) og `open` (macOS) eller `xdg-open`
+  (Linux) for `/norsk kalibrer`
 
-Skillen `transkriber` kjører `python3 -I <plugin>/kjerne/kjerne.py` på lydfila du
-peker på.
+**Verktøyene** i serveren:
 
-**Filer modden skriver:**
+| Verktøy | Hvem kan kalle det |
+|---|---|
+| `transkriber_fil` | Claude, for en lydfil du peker på |
+| `start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`, `sjekk_mappe` og `start_kalibrering` | Bare modden |
 
-- Kommandofiler i `$TMPDIR/norsk-tale-<økt-id>/<nr>.cmd` med ett ord (`start`,
-  `stopp` eller `avslutt`). Lytteren er den eneste som leser dem, og den sletter dem.
-- Selvtestresultatet `selvtest-claude-<tidspunkt>.json` i opptaksmappa.
+Modden skjuler de øvrige verktøyene for Claude (`tool.describe`) og avviser alle kall
+til dem som ikke kommer fra modden selv (`tool.check`, `tool.call` og `mcp.call`,
+etter hvem som kaller). Claude kan aldri starte mikrofonen; bare ditt trykk eller
+din snarvei gjør det.
 
-Modden skriver ingen bygge-, oppstarts-, innstillings- eller instruksjonsfiler.
+**Filer pluginen skriver:**
+
+- Selvtestresultatet `selvtest-claude-<tidspunkt>.json` i opptaksmappa (fra
+  modden).
+- MCP-SDK-ens venv i pluginens datamappe.
+- Kalibreringsriggens opptak og resultater i opptaksmappa, se `/norsk kalibrer`.
+
+Pluginen skriver ingen bygge-, oppstarts-, innstillings- eller instruksjonsfiler.
 
 **Det modden leser og sender:** Den leser teksten i promptboksen for å sette inn
 dikteringen ved markøren, for Angre og for selvtestens sjekk. Den sender aldri inn
-prompten og sender ingenting ut av maskinen. Den eneste nettverkstrafikken er
-loopback (`127.0.0.1`): til `whisper-server` og mellom nettleseren og riggen. Teksten
-går til Claude først når du selv sender prompten. Pluginen leser ingen
-legitimasjon (se [Personvern](#personvern)).
+prompten. Den eneste nettverkstrafikken under bruk er loopback (`127.0.0.1`): til
+`whisper-server` og mellom nettleseren og riggen. Teksten går til Claude først når
+du selv sender prompten.
 
 **Hookene:**
 
@@ -354,12 +385,15 @@ legitimasjon (se [Personvern](#personvern)).
   Ellers nullstiller den Angre-tilstanden og sender prompten videre uendret.
 - `command.run` svarer på `/norsk`.
 - `ui.render` tegner båndet over prompten og selvtestpanelet.
-- `session.start` registrerer kommandoen, og `session.end` stopper lytteren.
+- `session.start` registrerer kommandoen.
+- `tool.describe`, `tool.check`, `tool.call` og `mcp.call` er mikrofonvernet
+  beskrevet over.
 
 ## Personvern
 
-Se [PRIVACY.md](PRIVACY.md). Kort sagt samles ingen data inn, lyden forlater ikke
-maskinen, og pluginen gjør ingen nettverkskall under transkripsjon. De eneste
+Se [PRIVACY.md](PRIVACY.md). Kort sagt samles ingen data inn, og lyden forlater ikke
+maskinen. Claude kan aldri starte mikrofonen; bare ditt trykk eller din snarvei gjør
+det. Nett brukes én gang ved installasjon (MCP-SDK), aldri under bruk. De eneste
 forbindelsene er loopback (`127.0.0.1`): til en lokal `whisper-server` når den
 finnes, og mellom nettleseren og kalibreringsriggen når du bruker `/norsk kalibrer`.
 Teksten du sender til Claude, går dit som all annen tekst du sender.
@@ -367,7 +401,8 @@ Teksten du sender til Claude, går dit som all annen tekst du sender.
 **Ingen legitimasjon leses.** Katalogens automatiske sjekk har merket pluginen med
 «Uses a credential from the user's machine». Funnene gjaldt omtale i
 dokumentasjonen, ikke kode. Pluginen leser ingen tokens, API-nøkler eller andre
-hemmeligheter, bare `HOME`, `TMPDIR` og egne `NORSK_TALE_*`-variabler.
+hemmeligheter. Av miljøet leser den bare `HOME`, `PATH` (for å finne programmene)
+og egne `NORSK_TALE_*`-variabler.
 `huggingface.co` står her bare som kilde og kreditering.
 
 ## Utvikling
@@ -378,7 +413,7 @@ claude plugin test .
 python3 -m pytest tests
 ```
 
-Beslutningene står i [docs/decisions/](docs/decisions/) (NTA-0001 til NTA-0006).
+Beslutningene står i [docs/decisions/](docs/decisions/) (NTA-0001 til NTA-0007).
 
 Tester som trenger modellen og et ekte opptak, hoppes over med begrunnelse. Da må
 opptaket ligge utenfor repoet:
