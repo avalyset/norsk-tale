@@ -1,4 +1,4 @@
-# Standardkalibrering – plan (ikke kjørt)
+# Standardkalibrering – plan (erstattet av METHOD.md, prereg-v1)
 
 Status: plan. Ingen datasett er lastet ned. Kjøringen starter først etter at
 vilkårslisten er godkjent, og datasettene lagres bare på

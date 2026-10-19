@@ -65,6 +65,9 @@ TEMPERATUR = "0.0"
 # Prefiks foran hver underprosess. Tom i drift; testene setter den for å kjøre
 # whisper under et nettverksforbud på OS-nivå.
 PREFIKS: list = []
+# Øvre grense i sekunder for én underprosess. None i drift; kalibreringen
+# (reproduser.py) setter den, så en hengende whisper-kjøring blir et tidsavbrudd.
+TIDSGRENSE_S = None
 
 
 class KjerneFeil(Exception):
@@ -72,6 +75,10 @@ class KjerneFeil(Exception):
 
 
 class ModellAvvik(KjerneFeil):
+    pass
+
+
+class Tidsavbrudd(KjerneFeil):
     pass
 
 
@@ -189,7 +196,10 @@ def ekstra_whisper_args():
 
 
 def _kjor(argv):
-    r = subprocess.run([*PREFIKS, *map(str, argv)], capture_output=True)
+    try:
+        r = subprocess.run([*PREFIKS, *map(str, argv)], capture_output=True, timeout=TIDSGRENSE_S)
+    except subprocess.TimeoutExpired:
+        raise Tidsavbrudd(f"{pathlib.Path(str(argv[0])).name} brukte mer enn {TIDSGRENSE_S} s") from None
     if r.returncode != 0:
         hale = r.stderr.decode("utf-8", "replace").strip()[-600:]
         raise KjerneFeil(f"{pathlib.Path(str(argv[0])).name} feilet "

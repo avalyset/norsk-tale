@@ -1,0 +1,221 @@
+{
+ "versjon": "prereg-v1",
+ "metode": "kalibrering/METHOD.md",
+ "seed": 20261019,
+ "bootstrap": {
+  "B": 2000,
+  "metode": "prosentil, paret innen sett",
+  "seed_per_sett": "random.Random(f'{seed}/{sett}')",
+  "nedre_indeks": 50,
+  "ovre_indeks": 1949
+ },
+ "tidsgrense_s": 600,
+ "maks_gjentak": 1,
+ "stier": {
+  "NORSK_TALE_DATA": "rot for datasettene (målemaskin: Vault)",
+  "NORSK_TALE_MODELLER": "mappe med ggml-filene",
+  "NORSK_TALE_ARBEID": "arbeidsmappe for lyd og resultater (aldri i git)",
+  "NORSK_TALE_WHISPER_CLI": "sti til whisper-cli; bibliotekene ligger ved siden av"
+ },
+ "whisper_cpp": {
+  "repo": "ggml-org/whisper.cpp",
+  "commit": "4834a2327d008ace3ec5a9ed00f51454bcabbc1c",
+  "describe": "v1.9.2-64-g4834a232",
+  "backend": "metal",
+  "flagg": [
+   "-l",
+   "{no|nn}",
+   "-m",
+   "<modell>",
+   "-f",
+   "<wav>",
+   "-otxt",
+   "-of",
+   "<ut>",
+   "-np",
+   "-bs",
+   "5",
+   "-bo",
+   "5",
+   "-tp",
+   "0.0",
+   "[--prompt <vokabular>]"
+  ],
+  "ekstra_args": "",
+  "standardverdier": {
+   "-t": 4,
+   "gpu": "på",
+   "flash_attn": "på",
+   "-tpi": 0.2,
+   "-nf": false,
+   "-et": 2.4,
+   "-lpt": -1.0
+  },
+  "cli_sha256": "789c1ab72a4976944a98bcef77687f4f3fee78713714e24767ee476394bcff14",
+  "bibliotek_sha256": {
+   "libwhisper.1.9.2.dylib": "ff708bff9551bf37942d973423831fc65d4f8bd862e1604ca28172499b90af86",
+   "libggml.0.20.2.dylib": "833d1f3813e2c344d46657ee35020534fbdf6d0e48ec67c3227ef3dc88a09d3b",
+   "libggml-base.0.20.2.dylib": "d432e1838ee6d361ed547991ff8869a557fbc3e04e479778c0df7748685cd08d",
+   "libggml-cpu.0.20.2.dylib": "f87b6697aadc1f96c27960e9b7718710d63856e1a24499ff1bac9178811f4e76",
+   "libggml-blas.0.20.2.dylib": "65af25274aa195c0b3a446524da8c12bc812f6f17c66474797667b1bfee07307",
+   "libggml-metal.0.20.2.dylib": "3f7a8b8837c1b99cfd1afc77c627183d5224f0e12ae26b40769240ec9dd074f3"
+  }
+ },
+ "ffmpeg": "9.0.1 (logges i miljødumpen; konvertering 16 kHz mono s16le)",
+ "modellrekkefolge": [
+  "medium",
+  "large"
+ ],
+ "modeller": {
+  "medium": {
+   "fil": "nb-whisper-medium.bin",
+   "repo": "NbAiLab/nb-whisper-medium",
+   "hf_fil": "ggml-model.bin",
+   "bytes": 1533763076,
+   "sha256": "f73141401d203ee77fc7ddf7bf97926a8a85fe85faa6066a6920e4815f48a73d"
+  },
+  "large": {
+   "fil": "nb-whisper-large.bin",
+   "repo": "NbAiLab/nb-whisper-large",
+   "hf_fil": "ggml-model.bin",
+   "bytes": 3095033483,
+   "sha256": "0f2f66f22e11a7c7da3c582d8e5c89cb2c0011753ba9c7c9731e320a4ba33e76"
+  }
+ },
+ "normalisering": {
+  "kilde": "NbAiLab/nostram utils/evaluate.py normalizer(extra_clean=False, super_normalize=False)",
+  "commit": "448238e9c8d87c7ce1a9d1db24612bed31b6f320",
+  "implementasjon": "kalibrering/norm.py",
+  "kryssjekk": "jiwer 4.0.0 (bare kryssjekk)"
+ },
+ "sett": {
+  "fleurs": {
+   "filer": {
+    "fleurs_nb_no/test.tsv": "d137ed2b39d3294ee72423b08352ff6184123bd25477050b8e0b953aab8e29d4",
+    "fleurs_nb_no/test.tar.gz": "96fa705a6b30bc24548855f8dd1a2d722feb6bc78b9dfb2750dc075dc83a1ff4"
+   },
+   "utvalg": {
+    "n": "alle"
+   },
+   "idliste": "kalibrering/utvalg/fleurs.txt",
+   "malformer": [
+    "nb",
+    "nn"
+   ],
+   "prompt": [
+    "pa",
+    "av"
+   ],
+   "idliste_sha256": "a3629926a2e42b3dd409b1d0a2037b36e26227c3c0406da43ac110c693659767"
+  },
+  "nst": {
+   "filer": {
+    "nst_test/nst_no_test_close-0001-of-0003.json": "83faac575aca9cc2c788930c05535eb1c3a2bfb8e4eb1713b01cfeb18d731423",
+    "nst_test/nst_no_test_close-0001-of-0003.tar.gz": "240b080f16996c9d058de3d5fc4e182e93b94bfca372425bb31c386d9d50c5c1",
+    "nst_test/nst_no_test_close-0002-of-0003.json": "d7aeb763484af1201e66892bab3d781196f9a9857177a20b8f4f75af502c0d2c",
+    "nst_test/nst_no_test_close-0002-of-0003.tar.gz": "92efaa0327e8d9ef80fa706a4be126576c8194db7b2a72f7fdf6325373101102",
+    "nst_test/nst_no_test_close-0003-of-0003.json": "5db2c757523e79c6c31809d8373a619af385d68efafa02cc7e4a362812b98041",
+    "nst_test/nst_no_test_close-0003-of-0003.tar.gz": "a98913c63ac6772133393e0aedcf872b7fefbb2a1380419c6d35832115d3e2b2"
+   },
+   "utvalg": {
+    "n": 1500
+   },
+   "idliste": "kalibrering/utvalg/nst.txt",
+   "malformer": [
+    "nb",
+    "nn"
+   ],
+   "prompt": [
+    "pa"
+   ],
+   "idliste_sha256": "5eb2f85e648e16129274cd87aeec1c2236f042f7abf43dfeaed7e5c9504ddf9d"
+  },
+  "npsc": {
+   "filer": {
+    "npsc_test/20170207.json": "a3f0d286f9b9c2266a46cf731770136ee405709ed963fdabb291779e8b01216c",
+    "npsc_test/20170207_16K_mp3.tar.gz": "2c635a843a3d6809903732402421efbf843b4c311dca44d1c557c61a0c912193",
+    "npsc_test/20171122.json": "eddd862de93cb131fa463235ea8b89d0b6828eb5a4559c07c5d2b4ff03b53751",
+    "npsc_test/20171122_16K_mp3.tar.gz": "b27d503518ffb699159988b3e896484d9dfe1f04b2d0ef16df5da79f5827f777",
+    "npsc_test/20171219.json": "45b456791ee1410d28258d4811328278c385ae2d5970251359e2b419f200f52f",
+    "npsc_test/20171219_16K_mp3.tar.gz": "d24123c2e6da4053d50133c36d5571c9e62c460980c76385ddac370f23932e53",
+    "npsc_test/20180530.json": "855a28ae70f043d5add71363652298081232cfd6230c30aeb0506e4cc19585b2",
+    "npsc_test/20180530_16K_mp3.tar.gz": "44822703dae2d6334a84c57b39cbf2522eedeb841e658afbc751bcaf2953e5d4"
+   },
+   "utvalg": {
+    "n_per_stratum": {
+     "nb": 800,
+     "nn": "alle"
+    }
+   },
+   "idliste": "kalibrering/utvalg/npsc.txt",
+   "malformer": [
+    "nb",
+    "nn"
+   ],
+   "prompt": [
+    "pa"
+   ],
+   "idliste_sha256": "f13327ee8a404cc60137ed70db1af1f63b0041fe0a24ebc8b142d183fc1241ff"
+  },
+  "nb_tale": {
+   "filer": {
+    "nb_tale/Annotation.zip": "d37501a5cf59c626d94cc0babe0843489a25d8b077dcd059d324ed9717a6064f",
+    "nb_tale/sennheiser_1.tar.gz": "c8713f7eb5a0fa1d15cdf387b9793f9a950efa29310e8da867dfc4c5a3170ab0"
+   },
+   "utvalg": {
+    "n_per_stratum": {
+     "g01": 40,
+     "g02": 40,
+     "g03": 40,
+     "g04": 40,
+     "g05": 40,
+     "g06": 40,
+     "g07": 40,
+     "g08": 40,
+     "g09": 40,
+     "g10": 40,
+     "g11": 40,
+     "g12": 40
+    }
+   },
+   "idliste": "kalibrering/utvalg/nb_tale.txt",
+   "malformer": [
+    "nb",
+    "nn"
+   ],
+   "prompt": [
+    "pa"
+   ],
+   "idliste_sha256": "3a076c5c2ba6e3c4165f149e9596003e9e6a61f2c78c34544fb5344f019e69b7"
+  },
+  "nb_samtale": {
+   "filer": {
+    "nb_samtale/nb_samtale.zip": "dd1824e8500a534d46bb3047b4b96e21b24131151fe464df8e0b10a0caddb0a2"
+   },
+   "utvalg": {
+    "n": "alle"
+   },
+   "idliste": "kalibrering/utvalg/nb_samtale.txt",
+   "malformer": [
+    "nb",
+    "nn"
+   ],
+   "prompt": [
+    "pa"
+   ],
+   "idliste_sha256": "b7b707feaebc6ccfe0b90af3857e480653b5f77cb50578c9471d8847bb4643ad"
+  }
+ },
+ "kode_sha256": {
+  "kjerne/kjerne.py": "962e691c47824a4160bbd8fd208330abac5a7d4fd85ab803bedfaa17fb528a24",
+  "kjerne/korriger.py": "335bc6ac2454ee1744556f411c2f7cf6a44fcd02579b07ba9d201e863752cc68",
+  "kjerne/modeller.json": "72a0de5543db4b1f12917b87aaa1fc151bf1d517972239d0f14c21de60b27289",
+  "kjerne/vokabular/offentlig_no.txt": "c6ddfd764ce1b0bb113e94df172e307414990067f3d7f67102ef4236036cb341",
+  "kjerne/vokabular/fasit_offentlig.tsv": "fb61815f42d71323fce6680dec388eccf78de68c5d0062c922c07389e4c63ce6",
+  "kalibrering/norm.py": "70826a80cdb8b02810e1f70ad57509c1675f2a004fb114342d4bee917bbe6283",
+  "kalibrering/feilanalyse.py": "27b7efdc84611f33b5c47dc7bf0fec5e2aa0eb196f35e83ed01395c14e09f930",
+  "kalibrering/sett.py": "3a4e3178f2d31dd47b3aa30cc17d356a83b20987b9c040d08769fb231087c618",
+  "kalibrering/reproduser.py": "5a38201c73229bf33cb1ca575e2f82f43e83acba4292216f6ac5fc298503abd9",
+  "kalibrering/vakt.py": "e408c2c5eeab02621b61c8f7bd5ad1a61c4000e2f6ddac172bea59ada8e918dd"
+ }
+}
