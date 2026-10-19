@@ -2,6 +2,13 @@
 
 Preregistrering: OSF [rtbkz](https://osf.io/rtbkz/) (embargo til 2027-04-19) og git-taggen `prereg-v1`. Koden er versjon `v0.1.0`, arkivert på Zenodo som [10.5281/zenodo.23473249](https://doi.org/10.5281/zenodo.23473249).
 
+Fase-1-resultatene gjelder kjernen ved disse SHA-ene, uendret i v0.2.0:
+
+- `kjerne/kjerne.py` `962e691c47824a4160bbd8fd208330abac5a7d4fd85ab803bedfaa17fb528a24`
+- `kjerne/korriger.py` `335bc6ac2454ee1744556f411c2f7cf6a44fcd02579b07ba9d201e863752cc68`
+- `kjerne/vokabular/fasit_offentlig.tsv` `fb61815f42d71323fce6680dec388eccf78de68c5d0062c922c07389e4c63ce6`
+- `kjerne/vokabular/offentlig_no.txt` `c6ddfd764ce1b0bb113e94df172e307414990067f3d7f67102ef4236036cb341`
+
 Fase 1 etter AVVIK.md nr. 1: FLEURS × {medium, large} × nb × prompt {på, av}, og NB Tale × large × nb × prompt på. Scoret etter METHOD.md § 5 med `fase1.py scor` (de frosne funksjonene i `reproduser.py`). Tallene står i `prereg-v1-fase1.json`. Ingen lyd og ingen tekst fra datasettene er med.
 
 - Kjørt 19.10.2026 fra 11:14:44 til 13:11:18 med Metal under `vakt.py`. Estimatet før start var 2,33 t, og faktisk tid ble 1,94 t.

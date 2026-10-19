@@ -133,6 +133,15 @@ Fase 1 er kjørt med kjeden slik den leveres: whisper.cpp med NB-Whisper ggml p�
 konfidensintervall, og står i sin helhet i
 [`kalibrering/resultater/prereg-v1-fase1.md`](kalibrering/resultater/prereg-v1-fase1.md).
 
+Fase-1-resultatene gjelder kjernen ved disse SHA-ene, uendret i v0.2.0:
+
+- `kjerne/kjerne.py` `962e691c47824a4160bbd8fd208330abac5a7d4fd85ab803bedfaa17fb528a24`
+- `kjerne/korriger.py` `335bc6ac2454ee1744556f411c2f7cf6a44fcd02579b07ba9d201e863752cc68`
+- `kjerne/vokabular/fasit_offentlig.tsv` `fb61815f42d71323fce6680dec388eccf78de68c5d0062c922c07389e4c63ce6`
+- `kjerne/vokabular/offentlig_no.txt` `c6ddfd764ce1b0bb113e94df172e307414990067f3d7f67102ef4236036cb341`
+
+Testen `tests/test_preregistrering.py` feiler hvis noen av dem avviker.
+
 **FLEURS nb_no, test (357 ytringer), målform nb, rå tekst:**
 
 | Modell | Prompt av | Prompt på | NB-Whisper publisert (tabell 5) |
@@ -355,27 +364,11 @@ forbindelsene er loopback (`127.0.0.1`): til en lokal `whisper-server` når den
 finnes, og mellom nettleseren og kalibreringsriggen når du bruker `/norsk kalibrer`.
 Teksten du sender til Claude, går dit som all annen tekst du sender.
 
-**Ingen legitimasjon leses.** Katalogens automatiske sjekk merker pluginen med
-«Uses a credential from the user's machine» (2 funn). Begge funnene gjelder
-dokumentasjonen, ikke koden:
-
-- README nevner `~/.claude.json` i avsnittet om autooppdatering i testøkter, og
-  `huggingface.co` som kilde for modellen og datasettet.
-- CHANGELOG inneholder lenker.
-
-Ingen kode i pluginen leser `~/.claude.json`, tokens, API-nøkler eller andre
-hemmeligheter, og pluginen kontakter ikke Hugging Face. Dette er det pluginen
-faktisk leser av miljøet:
-
-- Modden leser `HOME`, `TMPDIR` og `NORSK_TALE_OPPTAK` for å finne opptaksmappa og
-  kontrollkatalogen.
-- Kjernen og lytteren leser `NORSK_TALE_MODELLVALG`, `NORSK_TALE_MALFORM`,
-  `NORSK_TALE_MODELL`, `NORSK_TALE_WHISPER`, `NORSK_TALE_WHISPER_ARGS`,
-  `NORSK_TALE_OPPTAK`, `NORSK_TALE_MIKROFON` og `NORSK_TALE_TESTKILDE`, pluss
-  hjemmemappa for standardstiene.
-
-Det eneste «tokenet» er det tilfeldige tokenet kalibreringsriggen lager selv for
-adressen sin på `127.0.0.1`.
+**Ingen legitimasjon leses.** Katalogens automatiske sjekk har merket pluginen med
+«Uses a credential from the user's machine». Funnene gjaldt omtale i
+dokumentasjonen, ikke kode. Pluginen leser ingen tokens, API-nøkler eller andre
+hemmeligheter, bare `HOME`, `TMPDIR` og egne `NORSK_TALE_*`-variabler.
+`huggingface.co` står her bare som kilde og kreditering.
 
 ## Utvikling
 
@@ -394,28 +387,7 @@ opptaket ligge utenfor repoet:
 NORSK_TALE_TESTLYD=/sti/til/opptak.m4a NORSK_TALE_MODELL=/sti/til/ggml-model.bin NORSK_TALE_WHISPER=/sti/til/whisper-cli python3 -m pytest tests
 ```
 
-### Interaktive testøkter og autooppdatering
-
-En interaktiv `claude`-økt kan oppdatere Claude Code i bakgrunnen. Ved
-native-installasjon bytter den da `~/.local/bin/claude`, også når økten er startet
-fra en annen binær, for eksempel den som følger med Claude-appen. Slik hindrer du
-det for en testøkt:
-
-```bash
-DISABLE_AUTOUPDATER=1 claude --plugin-dir .
-```
-
-- `DISABLE_AUTOUPDATER=1` (eller `DISABLE_UPDATES=1`, som også stopper `claude
-  update`) må stå i miljøet til selve `claude`-prosessen.
-- `"autoUpdates": false` i `~/.claude.json` **holder ikke** ved
-  native-installasjon. Når `autoUpdatesProtectedForNative` er satt, ser
-  oppdatereren bort fra den (målt i koden til 2.1.303).
-- «Updated to latest. Got …» ved oppstart er utgivelsesnotater. Meldingen vises
-  første gang en versjon nyere enn `lastReleaseNotesSeen` i `~/.claude.json`
-  starter, også når oppdatering er slått av. Den betyr ikke at noe ble lastet ned
-  i den økten.
-- Sjekk før og etter: `ls ~/.local/share/claude/versions` og
-  `readlink ~/.local/bin/claude`.
+Utviklerinstrukser (testøkter, autooppdatering) står i [docs/UTVIKLING.md](docs/UTVIKLING.md).
 
 ## Kreditering
 
