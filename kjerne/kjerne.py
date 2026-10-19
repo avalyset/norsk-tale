@@ -22,6 +22,8 @@ Konfigurasjon (argument > miljø > standard):
   --modell      NORSK_TALE_MODELL      sti til ggml-fila           (~/.cache/norsk-tale/nb-whisper-<valg>.bin)
   --whisper     NORSK_TALE_WHISPER     whisper-cli, navn eller sti (whisper-cli på PATH)
   --malform     NORSK_TALE_MALFORM     nb | nn | auto → whisper -l no | nn | auto  (nb)
+                NORSK_TALE_WHISPER_ARGS ekstra flagg til whisper-cli/-server, f.eks. «-ng -t 4»
+                                       (bare CPU, fire tråder) når andre jobber skal ha GPU-en
 whisper-server finnes ved siden av whisper-cli når en sti er gitt, ellers på PATH.
 
 Kryssplattform: pathlib overalt, ingen macOS-spesifikke kall. Kun testet på macOS.
@@ -33,6 +35,7 @@ import json
 import os
 import pathlib
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -181,6 +184,10 @@ def vokabular_prompt(stier):
     return ", ".join(former) + "." if former else ""
 
 
+def ekstra_whisper_args():
+    return shlex.split(os.environ.get("NORSK_TALE_WHISPER_ARGS", ""))
+
+
 def _kjor(argv):
     r = subprocess.run([*PREFIKS, *map(str, argv)], capture_output=True)
     if r.returncode != 0:
@@ -298,7 +305,7 @@ def transkriber(lydfil, oppsett=None, sha=None):
         til_wav(lyd, wav)
         argv = [oppsett.whisper_cli, "-l", oppsett.sprak, "-m", oppsett.modell, "-f", wav,
                 "-otxt", "-of", utbase, "-np", "-bs", str(STRALE), "-bo", str(BESTE_AV),
-                "-tp", TEMPERATUR]
+                "-tp", TEMPERATUR, *ekstra_whisper_args()]
         if prompt:
             argv += ["--prompt", prompt]
         _kjor(argv)
@@ -338,7 +345,7 @@ class Resident:
             self.port = s.getsockname()[1]
         argv = [*PREFIKS, str(o.whisper_server), "--host", "127.0.0.1",
                 "--port", str(self.port), "-m", str(o.modell), "-l", o.sprak,
-                "-bs", str(STRALE), "-bo", str(BESTE_AV)]
+                "-bs", str(STRALE), "-bo", str(BESTE_AV), *ekstra_whisper_args()]
         # whisper-server har ikke -tp; temperaturen sendes per forespørsel.
         # Serverloggen går til en midlertidig fil: en pipe ingen leser fylles
         # etter nok forespørsler, og da blokkerer serveren.

@@ -301,3 +301,23 @@ def test_cli_krev_montert(tmp_path):
     assert subprocess.run([*k, str(tmp_path)]).returncode == 0
     r = subprocess.run([*k, "/Volumes/norsk-tale-finnes-ikke/x"], capture_output=True, text=True)
     assert r.returncode == 5 and "ikke montert" in r.stderr
+
+
+def test_ekstra_whisper_args_sendes_med(tmp_path, monkeypatch):
+    innhold = b"modell"
+    o = _falsk_oppsett(tmp_path, innhold, hashlib.sha256(innhold).hexdigest())
+    kjort = []
+
+    def falsk_kjor(argv):
+        kjort.append([str(a) for a in argv])
+        if "-of" in kjort[-1]:
+            pathlib.Path(kjort[-1][kjort[-1].index("-of") + 1] + ".txt").write_text("hei\n")
+
+    monkeypatch.setattr(kjerne, "_kjor", falsk_kjor)
+    monkeypatch.setenv("NORSK_TALE_WHISPER_ARGS", "-ng -t 4")
+    lyd = tmp_path / "x.wav"
+    lyd.write_bytes(b"RIFF")
+    kjerne.transkriber(lyd, o, sha=o.sha256)
+    whisper = next(a for a in kjort if "-m" in a)
+    i = whisper.index("-ng")
+    assert whisper[i:i + 3] == ["-ng", "-t", "4"]
