@@ -299,6 +299,9 @@ samme tekst i tre kjøringer av samme fil. Se
 
 - Du vil ha trykk-og-hold på mellomromstasten, eller avbrudd med Esc.
 - Du dikterer på andre språk enn norsk, eller vil ha automatisk innsending.
+- Du trenger ikke velge mellom bokmål og nynorsk. Dokumentasjonen for `/voice`
+  lister norsk (`no`) blant de støttede språkene, men ikke `nb` og `nn` hver for seg
+  (sjekket 2026-10-19).
 - Du har ikke plass til en modell på 0,5–3,1 GB, eller ikke minne til den.
 - Du er logget inn med en claude.ai-konto og har ikke noe imot at lyden strømmes til
   Anthropic. Den innebygde dikteringen sender opptaket til Anthropics servere for
