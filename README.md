@@ -62,7 +62,7 @@ Innstillingene finnes i `/config` under pluginen:
 | Valg | Standard | Betydning |
 |---|---|---|
 | `modellvalg` | `large` | `large`, `medium` eller `small` |
-| `malform` | `nb` | Målformen whisper skal skrive: `nb` (bokmål, `-l no`), `nn` (nynorsk, `-l nn`) eller `auto` (whisper velger språk). Om `-l nn` faktisk gir nynorsk i whisper.cpp, er ikke målt ennå |
+| `malform` | `nb` | Målformen whisper skal skrive: `nb` (bokmål, `-l no`), `nn` (nynorsk, `-l nn`) eller `auto` (whisper velger språk). Se målingen under |
 | `modell` | tom | Sti til `ggml-model.bin`. Tom betyr `~/.cache/norsk-tale/nb-whisper-<modellvalg>.bin` |
 | `whisper` | tom | Navn eller sti til `whisper-cli`. Tom betyr `whisper-cli` på PATH. En eventuell `whisper-server` letes etter i samme mappe, eller på PATH når bare navnet er gitt |
 | `opptak` | tom | Mappe for kalibreringsopptak og selvtest-resultater. Tom betyr `NORSK_TALE_OPPTAK`, ellers `~/norsk-tale-opptak`. Ligger mappa på et eksternt volum (`/Volumes/…`) som ikke er montert, stopper norsk-tale i stedet for å skrive til intern disk. Det samme gjelder modellfila, også via symlenke |
@@ -78,6 +78,15 @@ og ingenting skrives til intern disk i stedet.
 `nice -n 19`. Den avbryter jobben når ledig minne faller under 20 %, målt med
 `memory_pressure -Q` som norregels minnevakt, eller når intern disk har mindre enn
 10 GiB ledig. Den sjekker hvert 5. sekund og logger hver sjekk og hvert avbrudd.
+
+### Målt: `-l nn` gir nynorsk, men kan miste en nektelse
+
+Dette ble målt 19.10.2026 på ett bokmålsopptak (45 s) med medium og large, på CPU.
+Med `-l nn` skrev whisper.cpp nynorsk («sjå», «ein», «berre», «mogleg», «ikkje»).
+Med large forsvant samtidig én av to nektelser: «Det er ikke sikkert …» med `nb` ble
+«Det er sikkert …» med `nn`. Velg derfor målformen du faktisk snakker, og les
+gjennom teksten før du sender den. `/norsk selvtest` og `/norsk kalibrer` måler
+dette for din stemme.
 
 ### Modellvalg og minnebruk
 
