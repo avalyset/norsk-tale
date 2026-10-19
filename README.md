@@ -1,5 +1,7 @@
 # Norsk tale
 
+Krever Claude Code. Virker ikke i Claude-appene på web, desktop eller mobil.
+
 Lokal norsk diktering i Claude Code. Trykk «🎙 Norsk» over prompten eller skriv
 `/norsk`, snakk norsk, og teksten settes inn der markøren står. Transkripsjonen
 gjøres av [NB-Whisper](https://huggingface.co/NbAiLab/nb-whisper-large) fra
