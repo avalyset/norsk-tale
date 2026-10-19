@@ -15,6 +15,11 @@ Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring.
 - Hooken på `mcp.call` er fjernet. Modellens kall stoppes av `tool.check` og
   `tool.call`, og porttesten for mikrofonvernet består uendret og feiler fortsatt
   uten vernet. Modden hooker nå ingen nettverks-, MCP- eller programkall.
+- `mcp/start.py` starter serveren med et filtrert miljø: bare `PATH`, `HOME`,
+  `TMPDIR`, språkvariablene, det `xdg-open` og Windows trenger, og `NORSK_TALE_*`.
+  Resten av Claude Codes miljø (også eventuelle nøkler) når ikke serveren, ffmpeg
+  eller whisper. `.mcp.json` sender fortsatt bare de fem `NORSK_TALE_VALGT_*`-verdiene
+  fra `${user_config.*}`.
 - README har fått seksjonen «Til katalogens vurderere», som svarer på hvert funn med
   fil og linje.
 - `docs/UTVIKLING.md` nevner ikke lenger stien til Claude Codes konfigurasjonsfil,
@@ -25,6 +30,7 @@ Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring.
 
 - `tests/test_katalogregler.py`: modden hooker ingen nett-, MCP- eller programkall,
   og verktøyhookene har matcheren.
+- `tests/test_mcp_start.py`: serveren får bare de tillatte miljøvariablene.
 
 ## [0.2.2] – 2026-10-19
 

@@ -416,6 +416,15 @@ Svar på funnene fra katalogens automatiske sjekk, med fil og linje i
   `tool.check` og `tool.call`, hver med en matcher som bare velger de sju
   verktøynavnene over (`VERNEDE`, linje 207). Hooken på `mcp.call` som sto på
   linje 455 i 0.2.2, er fjernet. Modden hooker ingen nettverks- eller programkall.
+- **Linje 415, `command.run`:** hooken har matcheren `{ command: 'norsk' }` og
+  svarer bare på pluginens egen kommando `/norsk` (med argumentene `angre`, `av`,
+  `oppsett`, `selvtest` og `kalibrer`). Andre kommandoer ser den ikke.
+- **Miljøvariabler til MCP-serveren:** `.mcp.json` sender bare fem verdier, alle fra
+  pluginens egne innstillinger: `NORSK_TALE_VALGT_MODELLVALG`, `…_MALFORM`,
+  `…_MODELL`, `…_WHISPER` og `…_OPPTAK` (`${user_config.*}`). `mcp/start.py` starter
+  serveren med et miljø som bare har `PATH`, `HOME`, `TMPDIR`, språkvariablene, de
+  variablene `xdg-open` (Linux) og Windows trenger, og `NORSK_TALE_*`. Alt annet i
+  miljøet, også eventuelle nøkler, når aldri serveren, ffmpeg eller whisper.
 - **Nett:** bare `pip install` av MCP-SDK-en ved første oppstart, låst til eksakte
   versjoner med SHA256-hasher (`mcp/krav.txt`, `pip install --require-hashes
   --only-binary :all:`). Aldri under bruk.

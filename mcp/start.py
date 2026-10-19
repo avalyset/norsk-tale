@@ -92,6 +92,20 @@ def rydd_etter_avbrutte(mappe):
             shutil.rmtree(p, ignore_errors=True)
 
 
+# Miljøet serveren (og ffmpeg/whisper under den) får. Claude Code starter denne fila
+# med hele sitt eget miljø; serveren trenger bare dette. Alt annet, også eventuelle
+# nøkler i brukerens miljø, blir igjen her.
+SLIPPES_GJENNOM = ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL", "LC_CTYPE",
+                   # Linux: xdg-open for /norsk kalibrer
+                   "DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
+                   # Windows
+                   "SYSTEMROOT", "PATHEXT", "USERPROFILE", "TEMP", "TMP")
+
+
+def server_miljo(miljo):
+    return {k: v for k, v in miljo.items() if k in SLIPPES_GJENNOM or k.startswith("NORSK_TALE_")}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--data", required=True, help="pluginens datamappe (${CLAUDE_PLUGIN_DATA})")
@@ -100,7 +114,7 @@ def main(argv=None):
         print("norsk-tale: fikk ingen datamappe fra Claude Code (${CLAUDE_PLUGIN_DATA}).", file=sys.stderr)
         return 2
     py = sikre_venv(a.data)
-    os.execv(str(py), [str(py), "-I", str(SERVER)])
+    os.execve(str(py), [str(py), "-I", str(SERVER)], server_miljo(os.environ))
 
 
 if __name__ == "__main__":

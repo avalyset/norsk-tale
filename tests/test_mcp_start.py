@@ -85,3 +85,22 @@ def test_rester_ryddes_ogsaa_naar_venvet_alt_er_ferdig(tmp_path, monkeypatch):
     (tmp_path / f"{mappe.name}.ny-{dod.pid}").mkdir()
     start.sikre_venv(tmp_path)
     assert [p.name for p in tmp_path.iterdir()] == [mappe.name]
+
+
+def test_serveren_faar_bare_egne_og_noedvendige_miljovariabler(tmp_path, monkeypatch):
+    """Claude Code starter start.py med hele sitt miljø. Serveren (og ffmpeg/whisper
+    under den) får bare PATH, HOME o.l. og NORSK_TALE_*; ingen nøkler slipper gjennom."""
+    kall = []
+    falsk_installasjon(monkeypatch, kall)
+    fanget = {}
+    monkeypatch.setattr(start.os, "execve", lambda py, argv, env: fanget.update(argv=argv, env=env))
+    monkeypatch.setattr(start.os, "environ", {
+        "PATH": "/usr/bin", "HOME": "/hjem/test", "LANG": "nb_NO.UTF-8",
+        "NORSK_TALE_VALGT_MODELLVALG": "medium", "NORSK_TALE_OPPTAK": "/opptak",
+        "ANTHROPIC_API_KEY": "x", "GITHUB_TOKEN": "x", "AWS_SECRET_ACCESS_KEY": "x", "SSH_AUTH_SOCK": "x",
+    })
+    start.main(["--data", str(tmp_path)])
+    assert fanget["argv"][1:] == ["-I", str(start.SERVER)]
+    assert fanget["env"] == {"PATH": "/usr/bin", "HOME": "/hjem/test", "LANG": "nb_NO.UTF-8",
+                             "NORSK_TALE_VALGT_MODELLVALG": "medium", "NORSK_TALE_OPPTAK": "/opptak"}
+
