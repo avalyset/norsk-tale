@@ -234,7 +234,7 @@ def _rens(tekst):
 
     whisper.cpp har ikke et flagg som dekker dette: `--suppress-nst` demper bare
     symbolene i `non_speech_tokens` (src/whisper.cpp), og `--suppress-regex
-    '<\|nocaptions\|>'` hadde ingen virkning, målt 19.10.2026 med large og medium
+    '<\\|nocaptions\\|>'` hadde ingen virkning, målt 19.10.2026 med large og medium
     (tokenet sto i utdata med og uten flagget). Filteret her er derfor primært."""
     linjer = (SPESIALTOKEN.sub("", ln).strip() for ln in tekst.splitlines())
     return "\n".join(ln for ln in linjer if ln)
