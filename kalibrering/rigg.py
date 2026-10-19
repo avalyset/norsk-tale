@@ -446,6 +446,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         return sti.path, q
 
     def _svar(self, status, kropp, ctype="application/json; charset=utf-8", ekstra=None):
+        if status >= 400:
+            # Ved feil kan kroppen være ulest; lukk tilkoblingen i stedet for å
+            # lese resten som en ny forespørsel.
+            self.close_connection = True
         if isinstance(kropp, (dict, list)):
             kropp = json.dumps(kropp, ensure_ascii=False).encode("utf-8")
         elif isinstance(kropp, str):
@@ -474,9 +478,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             data.extend(bit)
         return bytes(data)
 
-    def _json(self):
+    @staticmethod
+    def _json(kropp):
         try:
-            return json.loads(self._les() or b"{}")
+            return json.loads(kropp or b"{}")
         except json.JSONDecodeError:
             raise Feil(400, "Ugyldig JSON.")
 
@@ -524,10 +529,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             sti, q = self._vakt("POST")
             r = self.rigg
+            # Hele kroppen leses før ruting. En rute som lot den ligge, etterlot
+            # bytene på keep-alive-tilkoblingen, og neste forespørsel ble lest som
+            # metoden «{}POST» (HTTP 501).
+            kropp = self._les()
             if sti == "/api/runde":
-                return self._svar(200, r.ny_runde(self._json()))
+                return self._svar(200, r.ny_runde(self._json(kropp)))
             if sti == "/api/opptak":
-                data = self._les()
+                data = kropp
                 if not data:
                     raise Feil(400, "Tomt opptak.")
                 return self._svar(200, r.lagre_opptak(q.get("runde"), q.get("id"), data,
@@ -543,13 +552,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if sti == "/api/selvtest/start":
                 return self._svar(200, r.selvtest_start())
             if sti == "/api/selvtest/opptak":
-                data = self._les()
+                data = kropp
                 if not data:
                     raise Feil(400, "Tomt opptak.")
                 return self._svar(200, r.selvtest_opptak(q.get("id"), data, self.headers.get("Content-Type", ""),
                                                          q.get("slutt"), q.get("stillhet_ms")))
             if sti == "/api/selvtest/lagre":
-                return self._svar(200, r.selvtest_lagre(self._json()))
+                return self._svar(200, r.selvtest_lagre(self._json(kropp)))
             if sti == "/api/avslutt":
                 self._svar(200, {"ok": True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()

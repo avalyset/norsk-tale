@@ -411,3 +411,20 @@ def test_siden_har_selvtestfane_skjult_til_den_velges():
     assert 'id="fanSelvKnapp"' in html and ">Selvtest<" in html
     for sti in ("selvtest/start", "selvtest/opptak", "selvtest/lagre"):
         assert sti in html
+
+
+def test_post_uten_brukt_kropp_forgifter_ikke_keep_alive(server):
+    """POST /api/selvtest/start bruker ikke kroppen («{}» fra siden). Før rettelsen
+    ble den liggende på tilkoblingen, og neste forespørsel fikk HTTP 501."""
+    p, port, token, _ = server
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    hode = {"Host": f"127.0.0.1:{port}", "Origin": f"http://127.0.0.1:{port}", "Content-Type": "application/json"}
+    for _ in range(2):
+        c.request("POST", f"/api/selvtest/start?token={token}", body=b"{}", headers=hode)
+        r = c.getresponse()
+        r.read()
+        assert r.status == 200
+        c.request("GET", f"/api/selvtest?token={token}", headers={"Host": f"127.0.0.1:{port}"})
+        r = c.getresponse()
+        assert r.status == 200 and json.loads(r.read())["pagar"] is True
+    c.close()
