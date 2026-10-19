@@ -1,5 +1,7 @@
 # Standardkalibrering prereg-v1, fase 1: resultater
 
+Preregistrering: OSF [rtbkz](https://osf.io/rtbkz/) (embargo til 2027-04-19) og git-taggen `prereg-v1`. Koden er versjon `v0.1.0`, arkivert på Zenodo som [10.5281/zenodo.23473249](https://doi.org/10.5281/zenodo.23473249).
+
 Fase 1 etter AVVIK.md nr. 1: FLEURS × {medium, large} × nb × prompt {på, av}, og NB Tale × large × nb × prompt på. Scoret etter METHOD.md § 5 med `fase1.py scor` (de frosne funksjonene i `reproduser.py`). Tallene står i `prereg-v1-fase1.json`. Ingen lyd og ingen tekst fra datasettene er med.
 
 - Kjørt 19.10.2026 fra 11:14:44 til 13:11:18 med Metal under `vakt.py`. Estimatet før start var 2,33 t, og faktisk tid ble 1,94 t.

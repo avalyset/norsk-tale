@@ -4,6 +4,14 @@ type: software
 title: "norsk-tale: lokal norsk diktering i Claude Code med NB-Whisper og whisper.cpp"
 version: 0.1.0
 date-released: 2026-10-19
+doi: 10.5281/zenodo.23473248
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23473248
+    description: "Konsept-DOI, alle versjoner"
+  - type: doi
+    value: 10.5281/zenodo.23473249
+    description: "Versjon 0.1.0"
 authors:
   - family-names: "Botten Nicolaysen"
     given-names: "Eirik"
