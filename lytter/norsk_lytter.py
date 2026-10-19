@@ -12,12 +12,14 @@ mikrofonen, stillhetsvakten og protokollen mot modden. Selve transkripsjonen
   - modellen lastes ved første trykk og frigjøres etter 10 min uten aktivitet
   - lyden skrives bare til en midlertidig katalog og slettes etter transkripsjon
 
-Protokoll: modden skriver `<kontroll>/<løpenr>.cmd` med `start`, `stopp` eller
-`avslutt`. Lytteren svarer med én JSON-linje per hendelse på stdout.
+Protokoll: modden skriver `<kontroll>/<løpenr>.cmd` med `start`, `start:<målform>`
+(nb/nn/auto, overstyrer standarden for dette opptaket), `stopp` eller `avslutt`.
+Lytteren svarer med én JSON-linje per hendelse på stdout.
 """
 import argparse
 import array
 import collections
+import dataclasses
 import json
 import os
 import pathlib
@@ -223,6 +225,7 @@ class Lytter:
         self.ffmpeg = shutil.which("ffmpeg")
         self.sist_aktiv = klokke()
         self.oppsett = None
+        self.malform = None   # overstyring for opptaket som pågår
 
     def oppsettfeil(self):
         """Billige sjekker uten SHA (den verifiseres når modellen lastes).
@@ -250,9 +253,10 @@ class Lytter:
     def _laster_na(self):
         return self.laster is not None and self.laster.is_alive()
 
-    def start(self):
+    def start(self, malform=None):
         if self.opptak:
             return
+        self.malform = malform
         feil = self.oppsettfeil()
         if feil:
             emit(type="feil", melding=feil)
@@ -313,13 +317,19 @@ class Lytter:
                 w.setframerate(RATE)
                 w.writeframes(bytes(o.vakt.tale))
             try:
-                resultat = (self.kjerne.transkriber(wav, self.oppsett) if filbane
-                            else self.resident.transkriber(wav))
+                if filbane:
+                    oppsett = self.oppsett
+                    if self.malform:
+                        oppsett = dataclasses.replace(oppsett, malform=self.malform)
+                    resultat = self.kjerne.transkriber(wav, oppsett)
+                else:
+                    resultat = self.resident.transkriber(wav, malform=self.malform)
             except Exception as e:
                 emit(type="feil", melding=f"Transkripsjonen feilet: {e}")
                 return
         self.sist_aktiv = self.klokke()
-        emit(type="tekst", slutt=o.grunn, resultat=resultat, **maling)
+        emit(type="tekst", slutt=o.grunn, resultat=resultat,
+             malform=self.malform or self.konfig.get("malform") or "nb", **maling)
 
     def avslutt(self):
         self.stopp()
@@ -341,13 +351,14 @@ def main(argv=None):
     ap.add_argument("--modellvalg", default="")
     ap.add_argument("--modell", default="")
     ap.add_argument("--whisper", default="")
+    ap.add_argument("--malform", default="")
     ap.add_argument("--frigjor-etter", type=float, default=600.0,
                     help="Sekunder uten aktivitet før modellen frigjøres (standard 600).")
     a = ap.parse_args(argv)
     kontroll = a.kontroll.expanduser()
     kontroll.mkdir(parents=True, exist_ok=True)
     konfig = {"modellvalg": a.modellvalg or None, "modell": a.modell or None,
-              "whisper": a.whisper or None}
+              "whisper": a.whisper or None, "malform": a.malform or None}
     lytter = Lytter(last_kjerne(), konfig, frigjor_s=a.frigjor_etter)
     forelder = os.getppid()
     emit(type="oppe", feil=lytter.oppsettfeil())
@@ -358,8 +369,8 @@ def main(argv=None):
             for cmd in sorted(kontroll.glob("*.cmd"), key=lambda p: int(p.stem)):
                 ord_ = cmd.read_text(encoding="utf-8").strip()
                 cmd.unlink()
-                if ord_ == "start":
-                    lytter.start()
+                if ord_ == "start" or ord_.startswith("start:"):
+                    lytter.start(ord_.partition(":")[2] or None)
                 elif ord_ == "stopp":
                     lytter.stopp()
                 elif ord_ == "avslutt":

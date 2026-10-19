@@ -21,6 +21,7 @@ Konfigurasjon (argument > miljø > standard):
   --modellvalg  NORSK_TALE_MODELLVALG  large | medium | small      (large)
   --modell      NORSK_TALE_MODELL      sti til ggml-fila           (~/.cache/norsk-tale/nb-whisper-<valg>.bin)
   --whisper     NORSK_TALE_WHISPER     whisper-cli, navn eller sti (whisper-cli på PATH)
+  --malform     NORSK_TALE_MALFORM     nb | nn | auto → whisper -l no | nn | auto  (nb)
 whisper-server finnes ved siden av whisper-cli når en sti er gitt, ellers på PATH.
 
 Kryssplattform: pathlib overalt, ingen macOS-spesifikke kall. Kun testet på macOS.
@@ -49,7 +50,9 @@ import korriger  # noqa: E402
 VERSJON = "0.1.0"
 HER = pathlib.Path(__file__).resolve().parent
 MODELLER = HER / "modeller.json"
-SPRAK = "no"
+# Målform → whisper-språkkode. whisper.cpp har både «no» (norwegian) og «nn»
+# (nynorsk); NB-Whisper-modellkortet bruker language='nn' for nynorsk-utdata.
+SPRAKKODE = {"nb": "no", "nn": "nn", "auto": "auto"}
 EXE = ".exe" if os.name == "nt" else ""
 # Dekoding satt eksplisitt, så filbanen og Resident gir samme parametre
 # (whisper-server har andre standarder enn whisper-cli).
@@ -80,6 +83,11 @@ class Oppsett:
     whisper_server: object   # pathlib.Path, eller None når den ikke finnes
     fasit: tuple
     vokabular: tuple
+    malform: str = "nb"
+
+    @property
+    def sprak(self):
+        return SPRAKKODE[self.malform]
 
 
 def modellkatalog():
@@ -102,10 +110,13 @@ def finn_binar(navn_eller_sti):
     return pathlib.Path(funnet) if funnet else None
 
 
-def standard_oppsett(modellvalg=None, modell=None, whisper=None):
+def standard_oppsett(modellvalg=None, modell=None, whisper=None, malform=None):
     """Argument > miljø > standard. SHA256 kommer ALLTID fra modeller.json —
     konfigurasjonen kan flytte modellen, ikke endre hva den skal være."""
     valg = modellvalg or os.environ.get("NORSK_TALE_MODELLVALG") or "large"
+    malform = malform or os.environ.get("NORSK_TALE_MALFORM") or "nb"
+    if malform not in SPRAKKODE:
+        raise KjerneFeil(f"Ukjent målform «{malform}». Gyldige: {', '.join(SPRAKKODE)}.")
     katalog = modellkatalog()
     if valg not in katalog:
         raise KjerneFeil(f"Ukjent modellvalg «{valg}». Gyldige: {', '.join(katalog)}.")
@@ -121,7 +132,7 @@ def standard_oppsett(modellvalg=None, modell=None, whisper=None):
         server = finn_binar(f"whisper-server{EXE}")
     return Oppsett(valg, modellsti, m["sha256"], m["bytes"], m["repo"], cli, server,
                    (HER / "vokabular" / "fasit_offentlig.tsv",),
-                   (HER / "vokabular" / "offentlig_no.txt",))
+                   (HER / "vokabular" / "offentlig_no.txt",), malform)
 
 
 def verifiser_modell(sti, forventet):
@@ -235,7 +246,7 @@ def sjekk_oppsett(oppsett, verifiser_sha=True):
             mangler.append("modell-sha256")
             tiltak.append(str(e))
     ok = not mangler
-    linjer = [f"norsk-tale {VERSJON} — modellvalg {oppsett.modellvalg}",
+    linjer = [f"norsk-tale {VERSJON} — modellvalg {oppsett.modellvalg}, målform {oppsett.malform} (whisper -l {oppsett.sprak})",
               f"  ffmpeg:          {'ok' if 'ffmpeg' not in mangler else 'MANGLER'}",
               f"  whisper-cli:     {oppsett.whisper_cli or 'MANGLER'}",
               f"  whisper-server:  {oppsett.whisper_server or 'finnes ikke (valgfri)'}",
@@ -250,20 +261,23 @@ def sjekk_oppsett(oppsett, verifiser_sha=True):
             "versjon": VERSJON, "melding": "\n".join(linjer)}
 
 
-def transkriber(lydfil, oppsett=None):
-    """Filbanen: én whisper-cli-kjøring per fil. Ingen sockets."""
+def transkriber(lydfil, oppsett=None, sha=None):
+    """Filbanen: én whisper-cli-kjøring per fil. Ingen sockets.
+
+    `sha`: en SHA256 den som kaller allerede har verifisert i samme prosess
+    (kalibreringsriggen kjører mange filer); ellers verifiseres modellen her."""
     oppsett = oppsett or standard_oppsett()
     lyd = pathlib.Path(lydfil).expanduser()
     if not lyd.is_file():
         raise KjerneFeil(f"Fant ikke lydfila: {lyd}")
     _sjekk_binar(oppsett.whisper_cli, "whisper-cli")
-    sha = verifiser_modell(oppsett.modell, oppsett.sha256)
+    sha = sha if sha == oppsett.sha256 else verifiser_modell(oppsett.modell, oppsett.sha256)
     prompt = vokabular_prompt(oppsett.vokabular)
     with tempfile.TemporaryDirectory(prefix="norsk-tale-") as tmp:
         tmp = pathlib.Path(tmp)
         wav, utbase = tmp / "lyd.wav", tmp / "ut"
         til_wav(lyd, wav)
-        argv = [oppsett.whisper_cli, "-l", SPRAK, "-m", oppsett.modell, "-f", wav,
+        argv = [oppsett.whisper_cli, "-l", oppsett.sprak, "-m", oppsett.modell, "-f", wav,
                 "-otxt", "-of", utbase, "-np", "-bs", str(STRALE), "-bo", str(BESTE_AV),
                 "-tp", TEMPERATUR]
         if prompt:
@@ -304,7 +318,7 @@ class Resident:
             s.bind(("127.0.0.1", 0))
             self.port = s.getsockname()[1]
         argv = [*PREFIKS, str(o.whisper_server), "--host", "127.0.0.1",
-                "--port", str(self.port), "-m", str(o.modell), "-l", SPRAK,
+                "--port", str(self.port), "-m", str(o.modell), "-l", o.sprak,
                 "-bs", str(STRALE), "-bo", str(BESTE_AV)]
         # whisper-server har ikke -tp; temperaturen sendes per forespørsel.
         # Serverloggen går til en midlertidig fil: en pipe ingen leser fylles
@@ -343,7 +357,8 @@ class Resident:
     def lastet(self):
         return self.proc is not None and self.proc.poll() is None
 
-    def transkriber(self, lydfil):
+    def transkriber(self, lydfil, malform=None):
+        """`malform` overstyrer oppsettets målform for denne forespørselen."""
         if not self.proc:
             raise KjerneFeil("Resident er ikke startet.")
         lyd = pathlib.Path(lydfil).expanduser()
@@ -352,7 +367,8 @@ class Resident:
         with tempfile.TemporaryDirectory(prefix="norsk-tale-") as tmp:
             wav = pathlib.Path(tmp) / "lyd.wav"
             til_wav(lyd, wav)
-            felt = {"language": SPRAK, "response_format": "text",
+            sprak = SPRAKKODE[malform] if malform else self.oppsett.sprak
+            felt = {"language": sprak, "response_format": "text",
                     "temperature": TEMPERATUR, "beam_size": str(STRALE),
                     "best_of": str(BESTE_AV)}
             prompt = vokabular_prompt(self.oppsett.vokabular)
@@ -386,6 +402,7 @@ def main(argv=None):
     ap.add_argument("--modellvalg", default=None, help="large | medium | small")
     ap.add_argument("--modell", default=None, help="sti til ggml-fila")
     ap.add_argument("--whisper", default=None, help="whisper-cli, navn eller sti")
+    ap.add_argument("--malform", default=None, help="nb | nn | auto")
     ap.add_argument("--sjekk", action="store_true",
                     help="Sjekk ffmpeg, whisper.cpp og modell (med SHA256) uten å transkribere.")
     ap.add_argument("--uten-sha", action="store_true",
@@ -396,7 +413,7 @@ def main(argv=None):
         print(VERSJON)
         return 0
     try:
-        oppsett = standard_oppsett(a.modellvalg, a.modell, a.whisper)
+        oppsett = standard_oppsett(a.modellvalg, a.modell, a.whisper, a.malform)
         if a.sjekk:
             rapport = sjekk_oppsett(oppsett, verifiser_sha=not a.uten_sha)
             print(json.dumps(rapport, ensure_ascii=False, indent=2))

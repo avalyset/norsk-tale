@@ -39,7 +39,11 @@ ORDENS = {"tredje": 3, "fjerde": 4, "femte": 5, "sjette": 6, "sjuende": 7,
           "syvende": 7, "åttende": 8, "niende": 9, "tiende": 10, "ellevte": 11,
           "tolvte": 12, "trettende": 13, "fjortende": 14, "femtende": 15,
           "sekstende": 16, "syttende": 17, "attende": 18, "nittende": 19,
-          "tjuende": 20, "tjugande": 20, "trettiende": 30}
+          "tjuende": 20, "tjugande": 20, "trettiende": 30,
+          # nynorsk
+          "sjuande": 7, "åttande": 8, "niande": 9, "tiande": 10, "trettande": 13,
+          "fjortande": 14, "femtande": 15, "sekstande": 16, "syttande": 17,
+          "attande": 18, "nittande": 19, "tjuande": 20, "trettiande": 30}
 # Ord som også er vanlige ikke-tall, og som derfor bare telles inne i et
 # lengre tallord: «en», «ei», «ett» (artikler), «første», «andre».
 TVETYDIGE = {"en", "ett", "ein", "eitt", "ei", "ni", "to"}
@@ -166,11 +170,29 @@ def _inneholder(ord_, sekvens):
 
 
 # ---------------------------------------------------------------- målform
+# Former som bare finnes i den ene målformen. Telles på råordene, før tallord
+# blir sifre, så «femtande» og «femtende» fortsatt skiller.
 NN = {"eg", "ikkje", "frå", "dei", "kva", "korleis", "berre", "ho", "ein", "eit",
-      "kvifor", "noko", "nokon", "mykje", "søknadene"}
+      "kvifor", "noko", "nokon", "mykje", "korkje", "hjå", "heile", "meir", "vart",
+      "kjem", "gjeld", "treng", "enno", "innan", "steig", "bad", "gav", "fekk",
+      "måndag", "kostar", "krev", "ønskjer", "vore", "lese", "sendast", "betalast",
+      "opna", "handsama", "godkjende", "kommunane", "skjemaa", "tala", "rundar",
+      "tilskot", "rekninga", "framlegget", "førespurnadene", "millionar",
+      "sjuande", "åttande", "niande", "tiande", "trettande", "fjortande",
+      "femtande", "sekstande", "syttande", "attande", "nittande", "tjuande"}
 NB = {"jeg", "ikke", "fra", "de", "hva", "hvordan", "bare", "hun", "et", "hvorfor",
-      "noe", "noen", "mye"}
-NN.discard("søknadene")   # felles form
+      "noe", "noen", "mye", "verken", "hos", "hele", "mer", "ble", "kommer",
+      "gjelder", "trenger", "ennå", "innen", "steg", "ba", "ga", "fikk", "mandag",
+      "koster", "krever", "ønsker", "vært", "lest", "sendes", "betales", "åpnet",
+      "behandlet", "godkjente", "kommunene", "skjemaene", "tallene", "runder",
+      "tilskudd", "regningen", "forslaget", "henvendelsene", "millioner",
+      "sjuende", "syvende", "åttende", "niende", "tiende", "trettende", "fjortende",
+      "femtende", "sekstende", "syttende", "attende", "nittende", "tjuende"}
+
+
+def raaord(tekst):
+    t = unicodedata.normalize("NFC", tekst).lower()
+    return re.sub(r"[^\w\s]", " ", t).split()
 
 
 def malform(ord_):
@@ -231,15 +253,16 @@ def score_setning(fasit, utdata):
     forste_ok = forste is None or forste in ord_
     if not forste_ok:
         bom.append({"type": "første ord", "fasit": forste, "utdata": utdata})
-    mf = malform(ord_)
+    mf = malform(raaord(utdata))
     return {
         "id": fasit["id"],
         "setning": fasit["setning"],
         "utdata": utdata,
         "elementer": elementer,
         "forste_innholdsord": {"ord": forste, "treff": forste_ok},
+        # «uklar» (ingen markører i utdata) er ikke et funn; motsatt målform er det.
         "malform": {"forventet": fasit["malform"], "utdata": mf,
-                    "funn": fasit["malform"] != mf},
+                    "funn": mf not in (fasit["malform"], "uklar")},
         "bom": bom,
         "bestatt": not bom,
         "wer": wer(fasit["setning"], utdata),
@@ -248,12 +271,14 @@ def score_setning(fasit, utdata):
 
 
 def les_setninger(sti):
-    """TSV med kolonnene id, malform, klasse, setning, elementer (JSON)."""
+    """TSV med kolonnene id, malform, klasse, setning, elementer (JSON) og
+    eventuelt dialektutvalg (ja/nei)."""
     ut = []
     with open(sti, encoding="utf-8", newline="") as fh:
         for rad in csv.DictReader((ln for ln in fh if not ln.startswith("#")), delimiter="\t"):
             ut.append({"id": rad["id"], "malform": rad["malform"], "klasse": rad.get("klasse", ""),
-                       "setning": rad["setning"], "elementer": json.loads(rad["elementer"])})
+                       "setning": rad["setning"], "elementer": json.loads(rad["elementer"]),
+                       "dialektutvalg": (rad.get("dialektutvalg") or "nei").strip() == "ja"})
     return ut
 
 

@@ -91,7 +91,7 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
 
       expect(rec.spawns.length).toBe(1)
       expect(rec.spawns[0]?.slice(0, 2)).toEqual(['python3', '-I'])
-      expect(rec.spawns[0]?.slice(-6)).toEqual(['--modellvalg', 'large', '--modell', '', '--whisper', ''])
+      expect(rec.spawns[0]?.slice(-8)).toEqual(['--modellvalg', 'large', '--modell', '', '--whisper', '', '--malform', 'nb'])
       expect(rec.kommandoer).toEqual(['/tmp/test/norsk-tale-okt-1/1.cmd=start'])
       // segmentlinjene blir løpende tekst, og et mellomrom skiller fra utkastet
       expect(rec.fills).toEqual([{ text: ' Vi trenger tre eksemplarer, ikke fire.', mode: 'insert' }])
@@ -152,11 +152,11 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
     expect(rec.spawns.length).toBe(1)
   })
 
-  test('userConfig går videre til lytteren', { options: { modellvalg: 'small', modell: '/modeller/nb-small.bin', whisper: '/opt/bin/whisper-cli' } }, async ($, on) => {
+  test('userConfig går videre til lytteren', { options: { modellvalg: 'small', modell: '/modeller/nb-small.bin', whisper: '/opt/bin/whisper-cli', malform: 'nn' } }, async ($, on) => {
     const rec = rig(on, () => [])
     const ui = await band($, 'terminal')
     await ui.press({ key: 'norsk' })
-    expect(rec.spawns[0]?.slice(-6)).toEqual(['--modellvalg', 'small', '--modell', '/modeller/nb-small.bin', '--whisper', '/opt/bin/whisper-cli'])
+    expect(rec.spawns[0]?.slice(-8)).toEqual(['--modellvalg', 'small', '--modell', '/modeller/nb-small.bin', '--whisper', '/opt/bin/whisper-cli', '--malform', 'nn'])
   })
 
   test('/norsk oppsett kjører sjekken og laster ikke ned noe', async ($, on) => {

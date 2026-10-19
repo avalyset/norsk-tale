@@ -25,6 +25,7 @@ export type NorskSelvtestRad = {
   utdata: string
   verbatim: string
   slutt: string
+  malform_valgt: string
   stillhet_ms: number | null
   stopp_til_tekst_ms: number | null
   score: NorskScore | null

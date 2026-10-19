@@ -66,7 +66,7 @@ async function scor($: EngineInterface, id: string, utdata: string): Promise<{ s
 // Kalles etter hver vellykkede innsetting mens testen er aktiv.
 export async function etterInnsetting(
   $: EngineInterface,
-  maling: { verbatim: string; slutt: string; stillhet_ms: number | null; stopp_til_tekst_ms: number | null },
+  maling: { verbatim: string; slutt: string; stillhet_ms: number | null; stopp_til_tekst_ms: number | null; malform_valgt: string },
 ): Promise<boolean> {
   const st = await aktivTest($)
   if (!st || st.steg < 1 || st.steg > st.setninger.length) return false
@@ -80,7 +80,7 @@ export async function etterInnsetting(
   const { score, feil } = await scor($, s.id, utdata)
   const rad: NorskSelvtestRad = {
     id: s.id, setning: s.setning, malform: s.malform, prefiks_ok, boks: boks.text, utdata,
-    verbatim: maling.verbatim, slutt: maling.slutt, stillhet_ms: maling.stillhet_ms,
+    verbatim: maling.verbatim, slutt: maling.slutt, stillhet_ms: maling.stillhet_ms, malform_valgt: maling.malform_valgt,
     stopp_til_tekst_ms: maling.stopp_til_tekst_ms, score, scorefeil: feil,
   }
   await update($, selvtest, x => (x ? { ...x, resultater: [...x.resultater, rad], steg: n + 1 } : x))
@@ -135,7 +135,7 @@ export function oppsummer(st: NorskSelvtest): Oppsummering {
       sjekker += 1
       if (r.score.forste_innholdsord.treff) bestatt += 1
       if (r.score.malform.funn) {
-        funn.push(`Setning ${r.id}: forventet målform ${r.score.malform.forventet}, fikk ${r.score.malform.utdata}.`)
+        funn.push(`Setning ${r.id}: forventet målform ${r.score.malform.forventet}, fikk ${r.score.malform.utdata} (whisper kjørt med ${r.malform_valgt}).`)
       }
     } else {
       sjekker += 1

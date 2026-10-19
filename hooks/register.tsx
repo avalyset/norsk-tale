@@ -38,7 +38,7 @@ type Hendelse =
   | { type: 'behandler'; slutt: string; stillhet_ms?: number | null }
   | { type: 'tom'; slutt: string }
   | { type: 'feil'; melding: string }
-  | { type: 'tekst'; slutt: string; resultat: Resultat; stillhet_ms?: number | null }
+  | { type: 'tekst'; slutt: string; resultat: Resultat; stillhet_ms?: number | null; malform?: string }
 
 const TEKST: Record<NorskStatus, string> = {
   av: '',
@@ -63,6 +63,7 @@ export function medMellomrom(utkast: string, markor: number, tekst: string): str
 let modellvalg = 'large'
 let modell = ''
 let whisper = ''
+let malform = 'nb'
 let kontroll: string | undefined
 let lopenr = 0
 let lever = false
@@ -82,13 +83,13 @@ async function sikreKontroll($: EngineInterface): Promise<string> {
   return kontroll
 }
 
-async function kommando($: EngineInterface, ord: 'start' | 'stopp' | 'avslutt') {
+async function kommando($: EngineInterface, ord: string) {
   if (!kontroll) return
   lopenr += 1
   await $.fs.write(`${kontroll}/${lopenr}.cmd`, ord)
 }
 
-async function settInn($: EngineInterface, h: { slutt: string; resultat: Resultat; stillhet_ms?: number | null }) {
+async function settInn($: EngineInterface, h: { slutt: string; resultat: Resultat; stillhet_ms?: number | null; malform?: string }) {
   const r = h.resultat
   // Kjernen gir én linje per whisper-segment; i promptboksen er det løpende tekst.
   const tekst = r.korrigert.replace(/\s*\n\s*/g, ' ').trim()
@@ -107,7 +108,7 @@ async function settInn($: EngineInterface, h: { slutt: string; resultat: Resulta
     await update($, angre, () => ({ text: boks.text, cursor: boks.cursor }))
     await sett($, 'av')
     const maltTest = await etterInnsetting($, {
-      verbatim: r.verbatim, slutt: h.slutt, stillhet_ms: h.stillhet_ms ?? null,
+      verbatim: r.verbatim, slutt: h.slutt, stillhet_ms: h.stillhet_ms ?? null, malform_valgt: h.malform ?? malform,
       stopp_til_tekst_ms: stoppetVed === null ? null : naa - stoppetVed,
     })
     const st = await aktivTest($)
@@ -207,13 +208,16 @@ async function veksle($: EngineInterface): Promise<string> {
   if (st && !st.aktiv) await update($, selvtest, () => null)   // gammel oppsummering bort
   await startLytter($)
   await sett($, 'starter')
-  await kommando($, 'start')
+  // Under selvtesten styrer setningens målform whisper (setning 6 kjøres med nn).
+  const test = await aktivTest($)
+  const set = test && test.steg <= test.setninger.length ? test.setninger[test.steg - 1] : undefined
+  await kommando($, set && set.malform !== malform ? `start:${set.malform}` : 'start')
   return 'Lytter på norsk. Trykk igjen, eller 1,5 s stillhet, for å stoppe.'
 }
 
 // userConfig til kjernen, likt for lytteren og /norsk oppsett.
 function konfigArgv(): string[] {
-  return ['--modellvalg', modellvalg, '--modell', modell, '--whisper', whisper]
+  return ['--modellvalg', modellvalg, '--modell', modell, '--whisper', whisper, '--malform', malform]
 }
 
 async function oppsett($: EngineInterface): Promise<string> {
@@ -240,6 +244,7 @@ export const register: Register = (on, options) => {
   modellvalg = String(options.modellvalg ?? 'large')
   modell = String(options.modell ?? '')
   whisper = String(options.whisper ?? '')
+  malform = String(options.malform ?? 'nb')
 
   on('session.start', async ($, e, next) => {
     await $.command.register({

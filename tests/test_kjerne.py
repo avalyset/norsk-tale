@@ -251,3 +251,35 @@ def test_resident_gjentatte_kall_er_like():
         b = r.transkriber(TESTLYD)
         c = r.transkriber(TESTLYD)
     assert a == b == c
+
+
+# ------------------------------------------------------------------ målform
+def test_malform_gir_whisper_sprakkode(rent_miljo):
+    assert kjerne.standard_oppsett().sprak == "no"
+    assert kjerne.standard_oppsett(malform="nn").sprak == "nn"
+    assert kjerne.standard_oppsett(malform="auto").sprak == "auto"
+    with pytest.raises(kjerne.KjerneFeil, match="Ukjent målform"):
+        kjerne.standard_oppsett(malform="sv")
+
+
+def test_nynorsk_sendes_som_l_nn_og_verifisert_sha_gjenbrukes(tmp_path, monkeypatch):
+    innhold = b"modell"
+    o = _falsk_oppsett(tmp_path, innhold, hashlib.sha256(innhold).hexdigest())
+    o = kjerne.dataclasses.replace(o, malform="nn")
+    kjort = []
+
+    def falsk_kjor(argv):
+        kjort.append([str(a) for a in argv])
+        if "-of" in kjort[-1]:
+            pathlib.Path(kjort[-1][kjort[-1].index("-of") + 1] + ".txt").write_text("Eg har ikkje fått svar.\n")
+
+    monkeypatch.setattr(kjerne, "_kjor", falsk_kjor)
+    lest = []
+    monkeypatch.setattr(kjerne, "verifiser_modell", lambda sti, f: lest.append(sti) or f)
+    lyd = tmp_path / "x.wav"
+    lyd.write_bytes(b"RIFF")
+    ut = kjerne.transkriber(lyd, o, sha=o.sha256)
+    whisper = next(a for a in kjort if "-m" in a)
+    assert whisper[whisper.index("-l") + 1] == "nn"
+    assert lest == []                       # SHA-en var alt verifisert av den som kaller
+    assert ut["verbatim"] == "Eg har ikkje fått svar."

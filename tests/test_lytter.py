@@ -123,7 +123,7 @@ class FalskKjerne:
 
     @classmethod
     def transkriber(cls, wav, oppsett):
-        cls.filkall.append(wav)
+        cls.filkall.append((wav, getattr(oppsett, "malform", None)))
         return {"verbatim": "ja", "korrigert": "ja", "substitusjonslogg": [],
                 "modell_sha256": "f" * 64, "versjon": "0"}
 
@@ -237,3 +237,29 @@ def test_maling_uten_tale_er_tom():
     v = nl.Stillhetsvakt()
     mat(v, STILLE, rammer(1.0))
     assert v.maling() == {"stillhet_ms": None, "tale_ms": None}
+
+
+def test_start_med_malform_overstyrer_for_opptaket(monkeypatch, capsys):
+    """«start:nn» gir nynorsk for dette opptaket (selvtestens setning 6)."""
+    import dataclasses as dc
+
+    @dc.dataclass(frozen=True)
+    class UtenServer:
+        whisper_server: object = None
+        malform: str = "nb"
+
+    t = [0.0]
+    lytter = _lytter(monkeypatch, t)
+    FalskKjerne.oppsett = UtenServer()
+
+    class MedTale(FalskOpptak):
+        def __init__(self, ffmpeg, vakt):
+            super().__init__(ffmpeg, vakt)
+            vakt.har_tale = True
+            vakt.tale.extend(b"\x00\x01" * 160)
+
+    monkeypatch.setattr(nl, "Opptak", MedTale)
+    lytter.start("nn")
+    lytter.poll()
+    assert FalskKjerne.filkall[-1][1] == "nn"
+    assert '"malform": "nn"' in capsys.readouterr().out

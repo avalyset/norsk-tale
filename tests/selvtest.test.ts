@@ -48,6 +48,7 @@ const rig = (on: On, startUtkast = '') => {
   const scorekall: { id: string; stdin: string }[] = []
   const submits: string[] = []
   const apnet: string[] = []
+  const startord: string[] = []
   const ko: ProcessSpawnChunk[][] = []
   let hort = 0
   let vekk: (() => void) | undefined
@@ -59,10 +60,11 @@ const rig = (on: On, startUtkast = '') => {
   on('fs.write', ($, e) => {
     skrevet.push({ path: e.path, text: e.text })
     if (e.path.endsWith('.cmd')) {
-      ko.push(e.text === 'start'
+      if (e.text.startsWith('start')) startord.push(e.text)
+      ko.push(e.text.startsWith('start')
         ? [linje({ type: 'lytter' }), linje({ type: 'tale' }),
             linje({ type: 'behandler', slutt: 'stillhet', stillhet_ms: 1500, tale_ms: 3000 }),
-            linje({ type: 'tekst', slutt: 'stillhet', stillhet_ms: 1500, resultat: tekst(HORT[hort++] ?? '') })]
+            linje({ type: 'tekst', slutt: 'stillhet', stillhet_ms: 1500, malform: e.text === 'start:nn' ? 'nn' : 'nb', resultat: tekst(HORT[hort++] ?? '') })]
         : [])
       vekk?.()
     }
@@ -97,7 +99,7 @@ const rig = (on: On, startUtkast = '') => {
   on('ui.open', ($, e) => { apnet.push(e.id); return { value: { isPlaced: true } } })
   on('ui.toast', () => ({ value: undefined }))
   on('ui.render', ($, e) => $.ui.resolve(e).Box({}))
-  return { boks, fills, skrevet, scorekall, submits, apnet }
+  return { boks, fills, skrevet, scorekall, submits, apnet, startord }
 }
 
 const kjor = ($: Engine, args: string) => $.command.run({
@@ -147,7 +149,9 @@ describe('norsk-tale: /norsk selvtest', () => {
     // nynorsk som kom ut på bokmål er et funn, ikke en bom
     expect(rapport.resultater[2].score.malform.funn).toBe(true)
     expect(rapport.resultater[2].score.bestatt).toBe(true)
-    expect(rapport.oppsummering.funn).toEqual(['Setning 6: forventet målform nn, fikk nb.'])
+    expect(rec.startord).toEqual(['start', 'start', 'start:nn'])           // setning 6 kjøres med nynorsk
+    expect(rapport.resultater.map((r: { malform_valgt: string }) => r.malform_valgt)).toEqual(['nb', 'nb', 'nn'])
+    expect(rapport.oppsummering.funn).toEqual(['Setning 6: forventet målform nn, fikk nb (whisper kjørt med nn).'])
     expect(JSON.stringify(rapport)).not.toMatch(/\.wav|base64/)            // ingen lyd
 
     expect(rec.apnet).toContain('norsk-selvtest')
