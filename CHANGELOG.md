@@ -3,6 +3,19 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
+## [0.2.1] – 2026-10-19
+
+### Rettet
+
+- Første oppstart fra en GitHub-installasjon: MCP-serveren koblet ikke til.
+  Installasjonen av MCP-SDK-en tok mer enn de 5 s Claude Code venter på et første
+  svar, så serveren ble startet på nytt, og den nye prosessen ryddet venvet den
+  første skrev i. Nå installerer hver prosess i sin egen midlertidige mappe og
+  flytter den atomisk på plass. Den første som blir ferdig vinner, og bare egne
+  rester fra prosesser som ikke lever lenger, ryddes. Funnet i installasjonstesten
+  av 0.2.0. `tests/test_mcp_start.py` dekker det uten nett.
+- `pip install --no-compile` gjør første oppstart raskere.
+
 ## [0.2.0] – 2026-10-19
 
 ### Lagt til
@@ -95,6 +108,7 @@ versjonene følger semantisk versjonering.
 - Målformkrysset (nb mot nn) og de øvrige testsettene (NST, NPSC, NB Samtale) er
   fase 2 og ikke kjørt.
 
+[0.2.1]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.1
 [0.2.0]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.0
 [0.1.1]: https://github.com/avalyset/norsk-tale/releases/tag/v0.1.1
 [0.1.0]: https://github.com/avalyset/norsk-tale/releases/tag/v0.1.0

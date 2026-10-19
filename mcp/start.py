@@ -14,6 +14,8 @@ import argparse
 import hashlib
 import os
 import pathlib
+import re
+import shutil
 import subprocess
 import sys
 import venv
@@ -34,22 +36,60 @@ def python_i(mappe):
 
 
 def sikre_venv(data):
+    """Ferdig venv brukes som det er. Ellers installerer denne prosessen i sin egen
+    midlertidige mappe og flytter den på plass atomisk.
+
+    Claude Code kan starte serveren på nytt mens første installasjon pågår (en
+    treg oppstart får en ny prosess). Da installerer hver prosess for seg, den
+    første som blir ferdig vinner, og ingen rydder i en mappe en annen skriver i."""
     mappe = venv_mappe(data)
-    ferdig = mappe / ".installert"
-    if ferdig.is_file():
+    if (mappe / ".installert").is_file():
+        rydd_etter_avbrutte(mappe)
         return python_i(mappe)
-    print(f"norsk-tale: installerer MCP-SDK-en (låste versjoner) i {mappe} …", file=sys.stderr, flush=True)
     mappe.parent.mkdir(parents=True, exist_ok=True)
-    venv.EnvBuilder(with_pip=True, clear=True).create(mappe)
-    r = subprocess.run([str(python_i(mappe)), "-m", "pip", "install", "--disable-pip-version-check",
-                        "--no-input", "--require-hashes", "--only-binary", ":all:", "-r", str(KRAV)],
+    egen = mappe.with_name(f"{mappe.name}.ny-{os.getpid()}")
+    print(f"norsk-tale: installerer MCP-SDK-en (låste versjoner) i {mappe} …", file=sys.stderr, flush=True)
+    venv.EnvBuilder(with_pip=True).create(egen)
+    r = subprocess.run([str(python_i(egen)), "-m", "pip", "install", "--disable-pip-version-check",
+                        "--no-input", "--no-compile", "--require-hashes", "--only-binary", ":all:", "-r", str(KRAV)],
                        stdout=sys.stderr, stderr=sys.stderr)
     if r.returncode != 0:
+        shutil.rmtree(egen, ignore_errors=True)
         print("norsk-tale: installasjonen av MCP-SDK-en feilet (se over). Ingenting annet er endret.",
               file=sys.stderr, flush=True)
         sys.exit(r.returncode)
-    ferdig.write_text("ok\n", encoding="utf-8")
+    (egen / ".installert").write_text("ok\n", encoding="utf-8")
+    try:
+        os.rename(egen, mappe)          # atomisk; feiler hvis mappen alt finnes
+    except OSError:
+        if (mappe / ".installert").is_file():
+            shutil.rmtree(egen, ignore_errors=True)     # en annen prosess kom først
+        else:
+            # En halvferdig mappe fra et avbrutt eldre oppstartsforsøk: legg den til side.
+            os.rename(mappe, mappe.with_name(f"{mappe.name}.forlatt-{os.getpid()}"))
+            os.rename(egen, mappe)
+    rydd_etter_avbrutte(mappe)
     return python_i(mappe)
+
+
+def lever(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def rydd_etter_avbrutte(mappe):
+    """Fjerner bare egne rester ved siden av et ferdig venv: «<venv>.ny-<pid>» fra
+    en prosess som ikke lever lenger, og «<venv>.forlatt-<pid>»."""
+    mønster = re.compile(rf"^{re.escape(mappe.name)}\.(ny|forlatt)-(\d+)$")
+    for p in mappe.parent.iterdir():
+        m = mønster.match(p.name)
+        if m and p.is_dir() and (m.group(1) == "forlatt" or not lever(int(m.group(2)))):
+            shutil.rmtree(p, ignore_errors=True)
 
 
 def main(argv=None):
