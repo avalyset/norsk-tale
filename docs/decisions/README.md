@@ -13,3 +13,4 @@ eller registreringen det lenkes til.
 | [NTA-0004](NTA-0004-angre-og-snarvei.md) | Angre-knapp og tastatursnarvei, fordi Esc ikke når mods |
 | [NTA-0005](NTA-0005-nb-som-standard.md) | nb som standard målform |
 | [NTA-0006](NTA-0006-preregistrering-og-fasedeling.md) | Preregistrering på OSF og fasedeling |
+| [NTA-0007](NTA-0007-prosesser-i-lokal-mcp-server.md) | All oppstart av lokale programmer i én lokal MCP-server (skrevet før implementeringen) |
