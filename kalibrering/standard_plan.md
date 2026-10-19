@@ -39,10 +39,30 @@ antall nektelser i referansen, antall tapt, andel tapt og antall lagt til.
 
 Før resultater rapporteres, gjennomgås `kontaminering.md` for hvert sett. NB Samtale
 markeres som mulig optimistisk, fordi testen ikke er delt på taler. For NST
-rapporteres linje 1–1500 av nor0464 (NB-Whispers testutvalg) for seg.
+kan NB-Whispers testutvalg (linje 1–1500 av en intern fil) ikke gjenskapes
+sikkert. Se forbeholdet under.
 
-NST hentes fra Språkbanken (sbr-54, CC0). HF-kortet for `NbAiLab/NST` oppgir
-`apache-2.0`. Det avviket noteres i rapporten.
+**NST: valgt kilde og lisensavvik.** NST hentes som HF-varianten `NbAiLab/NST`
+(config `no-close`, splitt `test`). Det underliggende materialet er det samme som
+Språkbanken distribuerer (sbr-54, nor0464). Språkbanken oppgir CC0, mens HF-kortet
+oppgir `apache-2.0`. Rapporten noterer avviket og bruker Språkbankens CC0 som
+kildelisens.
+
+**NST: grunnlaget for 2,2 er ikke bekreftet** (sjekket 19.10.2026).
+
+- arXiv 2402.01917 sier bare «the test portion of this dataset distributed by The
+  Norwegian Language Bank».
+- Under treningen evaluerte NbAiLab på de første 1 500 linjene av en intern, renset
+  testfil (`processing_v5.md`: `sed -n '1,1500p' … nst_largetest.json`). Den fila
+  ligger i det private `ncc_speech`.
+- `nostram/utils/evaluate.py` tar datasettet som argument, uten standardverdi.
+- Et eldre prediksjonsskript (`predictions/predict_non_large_3e06_beams5_nst.sh`,
+  forgjengermodellen «scream») bruker `NbAiLab/NST` `no-close`/`test`.
+- HF-splitten er hele testen (≈31 000 ytringer), ikke 1 500.
+
+Om 2,2 er regnet på hele testen eller på utvalget på 1 500, og fra HF eller fra
+`ncc_speech`, er ikke dokumentert. NST-tallet kan derfor ikke sammenlignes direkte
+med 2,2 uten dette forbeholdet.
 
 Rapporten krediterer FLEURS (CC-BY-4.0): «FLEURS: Few-shot Learning Evaluation of
 Universal Representations of Speech», Conneau mfl., 2022, Google,
