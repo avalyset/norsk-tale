@@ -179,3 +179,33 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
     expect(rec.submits).toEqual([])
   })
 })
+
+describe('norsk-tale: /norsk kalibrer', () => {
+  test('starter riggen, åpner nettleseren og holder tokenet utenfor kommandoteksten', async ($, on) => {
+    const url = 'http://127.0.0.1:50123/hemmeligtoken/'
+    const spawns: string[][] = []
+    const kjort: string[][] = []
+    mock.env(on, { TMPDIR: '/tmp/test/' })
+    mock.clock(on)
+    on('process.spawn', async function* ($, e) {
+      spawns.push([...e.argv])
+      yield { stream: 'stdout', text: `${JSON.stringify({ type: 'klar', url, opptak: '/hjem/norsk-tale-opptak' })}\n` }
+      await new Promise<void>(() => {})
+      return { value: { code: 0, signal: null } as ProcessSpawnResult }
+    })
+    on('process.run', ($, e) => {
+      kjort.push([...e.argv])
+      return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    })
+    on('ui.toast', () => ({ value: undefined }))
+    on('ui.render', ($, e) => $.ui.resolve(e).Box({}))
+    const r = await $.command.run({ command: 'norsk', args: 'kalibrer', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+    expect(r.text).toContain('Starter kalibreringsriggen')
+    expect(r.text).not.toContain('hemmeligtoken')
+    await vent()
+    expect(spawns[0]?.some(a => a.endsWith('/kalibrering/rigg.py'))).toBe(true)
+    expect(kjort).toContainEqual(['open', url])
+    const ui = await band($, 'terminal')
+    expect(await ui.find({ type: 'Text', text: /Kalibreringsriggen: http:\/\/127\.0\.0\.1:50123\/hemmeligtoken\// })).toBeDefined()
+  })
+})

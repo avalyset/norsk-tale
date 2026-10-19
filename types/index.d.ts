@@ -50,6 +50,7 @@ declare module 'claude-code' {
       angre: NorskAngre | null
       laster: boolean
       selvtest: NorskSelvtest | null
+      rigg: string | null
     }
   }
 }

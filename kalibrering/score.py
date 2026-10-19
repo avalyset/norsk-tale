@@ -26,6 +26,9 @@ import re
 import sys
 import unicodedata
 
+sys.path.insert(0, __import__("os").path.dirname(__import__("os").path.abspath(__file__)))
+import norm  # noqa: E402
+
 # ------------------------------------------------------------------ tallord
 ENER = {"null": 0, "en": 1, "ett": 1, "én": 1, "ein": 1, "eitt": 1, "ei": 1,
         "to": 2, "tre": 3, "fire": 4, "fem": 5, "seks": 6, "sju": 7, "syv": 7,
@@ -180,7 +183,7 @@ NN = {"eg", "ikkje", "frå", "dei", "kva", "korleis", "berre", "ho", "ein", "eit
       "tilskot", "rekninga", "framlegget", "førespurnadene", "millionar",
       "sjuande", "åttande", "niande", "tiande", "trettande", "fjortande",
       "femtande", "sekstande", "syttande", "attande", "nittande", "tjuande"}
-NB = {"jeg", "ikke", "fra", "de", "hva", "hvordan", "bare", "hun", "et", "hvorfor",
+NB = {"jeg", "ikke", "fra", "de", "hva", "hvordan", "bare", "hun", "en", "et", "hvorfor",
       "noe", "noen", "mye", "verken", "hos", "hele", "mer", "ble", "kommer",
       "gjelder", "trenger", "ennå", "innen", "steg", "ba", "ga", "fikk", "mandag",
       "koster", "krever", "ønsker", "vært", "lest", "sendes", "betales", "åpnet",
@@ -215,24 +218,16 @@ def forste_innholdsord(setning):
 
 
 # ---------------------------------------------------------------- WER/CER
-def _lev(a, b):
-    forrige = list(range(len(b) + 1))
-    for i, x in enumerate(a, 1):
-        naa = [i]
-        for j, y in enumerate(b, 1):
-            naa.append(min(forrige[j] + 1, naa[j - 1] + 1, forrige[j - 1] + (x != y)))
-        forrige = naa
-    return forrige[-1]
-
-
+# Én definisjon i hele pluginen: NB-Whisper-prosjektets normalisering (norm.py).
+# Tallnormaliseringen over brukes bare til målelementene, aldri til WER/CER.
 def wer(fasit, utdata):
-    f, u = normaliser(fasit), normaliser(utdata)
-    return round(_lev(f, u) / max(1, len(f)), 4)
+    f, n = norm.ordfeil(fasit, utdata)
+    return round(f / max(1, n), 4)
 
 
 def cer(fasit, utdata):
-    f, u = " ".join(normaliser(fasit)), " ".join(normaliser(utdata))
-    return round(_lev(f, u) / max(1, len(f)), 4)
+    f, n = norm.tegnfeil(fasit, utdata)
+    return round(f / max(1, n), 4)
 
 
 # ------------------------------------------------------------------ scoring

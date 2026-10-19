@@ -40,6 +40,11 @@ innstillinger.
   (`start`, `stopp`, `avslutt`) som slettes etter hvert som de leses. Den tomme
   katalogen blir liggende til systemet rydder `$TMPDIR`.
 - Modellen ligger der du har lagt den. Standard er `~/.cache/norsk-tale/`.
+- `/norsk kalibrer` lagrer opptak (16 kHz wav), transkripsjoner og resultater i
+  `~/norsk-tale-opptak/<runde>/` til du sletter dem. Siden har en slette-knapp for
+  opptakene. Serveren lytter bare på `127.0.0.1`, krever et tilfeldig token og gjør
+  ingen utgående nettverkskall. «Eksporter bidrag» lager en fil med bare tall,
+  uten lyd og uten tekst, og bare når du ber om det.
 - `/norsk selvtest` lagrer resultatet som `~/norsk-tale-opptak/selvtest-<tidspunkt>.json`:
   setningene, teksten som ble transkribert, målingene og scoren. Ingen lyd. Fila
   blir liggende til du sletter den.

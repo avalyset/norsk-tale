@@ -1,0 +1,104 @@
+# norsk-tale kalibreringsmanus v1. 40 setninger bokmål, de samme 40 på nynorsk, 20 enkeltord.
+# Tall skrives som sifre i målelementene; utdata normaliseres (tallord → sifre) før sammenligning.
+# dialektutvalg=ja: de ti kombinerte setningene (tall + nektelse + navn) på både nb og nn.
+id	malform	klasse	setning	elementer	dialektutvalg
+nb01	nb	tall	Regningen på fire tusen fem hundre kroner må betales innen fredag.	[{"type": "tall", "former": ["4500"]}]	nei
+nb02	nb	tall	Prisen steg med tolv prosent fra i fjor.	[{"type": "tall", "former": ["12 prosent"]}]	nei
+nb03	nb	tall	Søknadsfristen er femtende mars.	[{"type": "tall", "former": ["15"]}]	nei
+nb04	nb	tall	Huset ble bygget i nitten hundre og åtti.	[{"type": "tall", "former": ["1980"]}]	nei
+nb05	nb	tall	Vi var på tredje plass etter to runder.	[{"type": "tall", "former": ["3"]}]	nei
+nb06	nb	tall	Kurset koster to hundre og femti kroner per time.	[{"type": "tall", "former": ["250"]}]	nei
+nb07	nb	tall	Det kom sekstisju søknader innen fristen.	[{"type": "tall", "former": ["67"]}]	nei
+nb08	nb	tall	Avtalen gjelder fra første januar tjuetjueseks.	[{"type": "tall", "former": ["2026"]}]	nei
+nb09	nb	tall	Bare åtti prosent av skjemaene var fylt ut.	[{"type": "tall", "former": ["80 prosent"]}]	nei
+nb10	nb	tall	Vi trenger tolv tusen kroner til utstyret.	[{"type": "tall", "former": ["12000"]}]	nei
+nb11	nb	nektelse	Jeg har ikke fått brevet.	[{"type": "nektelse", "former": ["ikke"]}]	nei
+nb12	nb	nektelse	Vi kommer aldri til å godta det forslaget.	[{"type": "nektelse", "former": ["aldri"]}]	nei
+nb13	nb	nektelse	Ingen av dem hadde lest kontrakten.	[{"type": "nektelse", "former": ["ingen"]}]	nei
+nb14	nb	nektelse	Han ville verken betale eller svare.	[{"type": "nektelse", "former": ["verken"]}]	nei
+nb15	nb	nektelse	Nei, det stemmer ikke.	[{"type": "nektelse", "former": ["nei"]}, {"type": "nektelse", "former": ["ikke"]}]	nei
+nb16	nb	nektelse	Det er ikke noe problem for oss.	[{"type": "nektelse", "former": ["ikke"]}]	nei
+nb17	nb	nektelse	Hun sa at hun aldri hadde vært der.	[{"type": "nektelse", "former": ["aldri"]}]	nei
+nb18	nb	nektelse	Ingen har meldt seg på kurset ennå.	[{"type": "nektelse", "former": ["ingen"]}]	nei
+nb19	nb	nektelse	Vi ønsker ikke å fornye abonnementet.	[{"type": "nektelse", "former": ["ikke"]}]	nei
+nb20	nb	nektelse	Det var verken varmt eller kaldt i rommet.	[{"type": "nektelse", "former": ["verken"]}]	nei
+nb21	nb	navn	Skjemaet skal sendes til Lånekassen.	[{"type": "navn", "former": ["Lånekassen"]}]	nei
+nb22	nb	navn	Datatilsynet har åpnet en sak om dette.	[{"type": "navn", "former": ["Datatilsynet"]}]	nei
+nb23	nb	navn	Vi fikk tilskudd fra Enova i år.	[{"type": "navn", "former": ["Enova"]}]	nei
+nb24	nb	navn	Kartverket har oppdatert kartet over hele området.	[{"type": "navn", "former": ["Kartverket"]}]	nei
+nb25	nb	navn	Søknaden ble sendt til Husbanken på mandag.	[{"type": "navn", "former": ["Husbanken"]}]	nei
+nb26	nb	navn	Folkehelseinstituttet publiserte en ny rapport.	[{"type": "navn", "former": ["Folkehelseinstituttet"]}]	nei
+nb27	nb	navn	Mattilsynet var på inspeksjon hos oss i går.	[{"type": "navn", "former": ["Mattilsynet"]}]	nei
+nb28	nb	navn	Vi må registrere patentet hos Patentstyret.	[{"type": "navn", "former": ["Patentstyret"]}]	nei
+nb29	nb	navn	Arbeidstilsynet ba om mer dokumentasjon.	[{"type": "navn", "former": ["Arbeidstilsynet"]}]	nei
+nb30	nb	navn	Nasjonalbiblioteket har digitalisert de gamle avisene.	[{"type": "navn", "former": ["Nasjonalbiblioteket"]}]	nei
+nb31	nb	kombinert	Helfo har ikke utbetalt de to tusen kronene ennå.	[{"type": "nektelse", "former": ["ikke"]}, {"type": "tall", "former": ["2000"]}, {"type": "navn", "former": ["Helfo"]}]	ja
+nb32	nb	kombinert	UDI behandlet ingen av de femten søknadene i mai.	[{"type": "nektelse", "former": ["ingen"]}, {"type": "tall", "former": ["15"]}, {"type": "navn", "former": ["UDI"]}]	ja
+nb33	nb	kombinert	Forskningsrådet ga aldri mer enn ti prosent i støtte.	[{"type": "nektelse", "former": ["aldri"]}, {"type": "tall", "former": ["10 prosent"]}, {"type": "navn", "former": ["Forskningsrådet"]}]	ja
+nb34	nb	kombinert	SSB rapporterte ikke tallene for tjuetjuefire.	[{"type": "nektelse", "former": ["ikke"]}, {"type": "tall", "former": ["2024"]}, {"type": "navn", "former": ["SSB"]}]	ja
+nb35	nb	kombinert	Statsforvalteren svarte ikke før tjuende april.	[{"type": "nektelse", "former": ["ikke"]}, {"type": "tall", "former": ["20"]}, {"type": "navn", "former": ["Statsforvalteren"]}]	ja
+nb36	nb	kombinert	NVE godkjente verken søknaden eller de tre klagene.	[{"type": "nektelse", "former": ["verken"]}, {"type": "tall", "former": ["3"]}, {"type": "navn", "former": ["NVE"]}]	ja
+nb37	nb	kombinert	Skatteetaten krever ikke inn de seks hundre kronene.	[{"type": "nektelse", "former": ["ikke"]}, {"type": "tall", "former": ["600"]}, {"type": "navn", "former": ["Skatteetaten"]}]	ja
+nb38	nb	kombinert	Ingen av de åtte kommunene har svart Digdir.	[{"type": "nektelse", "former": ["ingen"]}, {"type": "tall", "former": ["8"]}, {"type": "navn", "former": ["Digdir"]}]	ja
+nb39	nb	kombinert	Siva investerte aldri mer enn fem millioner kroner.	[{"type": "nektelse", "former": ["aldri"]}, {"type": "tall", "former": ["5 millioner", "5000000"]}, {"type": "navn", "former": ["Siva"]}]	ja
+nb40	nb	kombinert	Investinor har ikke svart på de tre siste henvendelsene.	[{"type": "nektelse", "former": ["ikke"]}, {"type": "tall", "former": ["3"]}, {"type": "navn", "former": ["Investinor"]}]	ja
+nn01	nn	tall	Rekninga på fire tusen fem hundre kroner må betalast innan fredag.	[{"type": "tall", "former": ["4500"]}]	nei
+nn02	nn	tall	Prisen steig med tolv prosent frå i fjor.	[{"type": "tall", "former": ["12 prosent"]}]	nei
+nn03	nn	tall	Søknadsfristen er femtande mars.	[{"type": "tall", "former": ["15"]}]	nei
+nn04	nn	tall	Huset vart bygd i nitten hundre og åtti.	[{"type": "tall", "former": ["1980"]}]	nei
+nn05	nn	tall	Vi var på tredje plass etter to rundar.	[{"type": "tall", "former": ["3"]}]	nei
+nn06	nn	tall	Kurset kostar to hundre og femti kroner i timen.	[{"type": "tall", "former": ["250"]}]	nei
+nn07	nn	tall	Det kom sekstisju søknader innan fristen.	[{"type": "tall", "former": ["67"]}]	nei
+nn08	nn	tall	Avtalen gjeld frå første januar tjuetjueseks.	[{"type": "tall", "former": ["2026"]}]	nei
+nn09	nn	tall	Berre åtti prosent av skjemaa var fylte ut.	[{"type": "tall", "former": ["80 prosent"]}]	nei
+nn10	nn	tall	Vi treng tolv tusen kroner til utstyret.	[{"type": "tall", "former": ["12000"]}]	nei
+nn11	nn	nektelse	Eg har ikkje fått brevet.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}]	nei
+nn12	nn	nektelse	Vi kjem aldri til å godta det framlegget.	[{"type": "nektelse", "former": ["aldri"]}]	nei
+nn13	nn	nektelse	Ingen av dei hadde lese kontrakten.	[{"type": "nektelse", "former": ["ingen"]}]	nei
+nn14	nn	nektelse	Han ville korkje betale eller svare.	[{"type": "nektelse", "former": ["korkje", "verken"]}]	nei
+nn15	nn	nektelse	Nei, det stemmer ikkje.	[{"type": "nektelse", "former": ["nei"]}, {"type": "nektelse", "former": ["ikkje", "ikke"]}]	nei
+nn16	nn	nektelse	Det er ikkje noko problem for oss.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}]	nei
+nn17	nn	nektelse	Ho sa at ho aldri hadde vore der.	[{"type": "nektelse", "former": ["aldri"]}]	nei
+nn18	nn	nektelse	Ingen har meldt seg på kurset enno.	[{"type": "nektelse", "former": ["ingen"]}]	nei
+nn19	nn	nektelse	Vi ønskjer ikkje å fornye abonnementet.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}]	nei
+nn20	nn	nektelse	Det var korkje varmt eller kaldt i rommet.	[{"type": "nektelse", "former": ["korkje", "verken"]}]	nei
+nn21	nn	navn	Skjemaet skal sendast til Lånekassen.	[{"type": "navn", "former": ["Lånekassen"]}]	nei
+nn22	nn	navn	Datatilsynet har opna ei sak om dette.	[{"type": "navn", "former": ["Datatilsynet"]}]	nei
+nn23	nn	navn	Vi fekk tilskot frå Enova i år.	[{"type": "navn", "former": ["Enova"]}]	nei
+nn24	nn	navn	Kartverket har oppdatert kartet over heile området.	[{"type": "navn", "former": ["Kartverket"]}]	nei
+nn25	nn	navn	Søknaden vart send til Husbanken på måndag.	[{"type": "navn", "former": ["Husbanken"]}]	nei
+nn26	nn	navn	Folkehelseinstituttet publiserte ein ny rapport.	[{"type": "navn", "former": ["Folkehelseinstituttet"]}]	nei
+nn27	nn	navn	Mattilsynet var på inspeksjon hjå oss i går.	[{"type": "navn", "former": ["Mattilsynet"]}]	nei
+nn28	nn	navn	Vi må registrere patentet hjå Patentstyret.	[{"type": "navn", "former": ["Patentstyret"]}]	nei
+nn29	nn	navn	Arbeidstilsynet bad om meir dokumentasjon.	[{"type": "navn", "former": ["Arbeidstilsynet"]}]	nei
+nn30	nn	navn	Nasjonalbiblioteket har digitalisert dei gamle avisene.	[{"type": "navn", "former": ["Nasjonalbiblioteket"]}]	nei
+nn31	nn	kombinert	Helfo har ikkje betalt ut dei to tusen kronene enno.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}, {"type": "tall", "former": ["2000"]}, {"type": "navn", "former": ["Helfo"]}]	ja
+nn32	nn	kombinert	UDI handsama ingen av dei femten søknadene i mai.	[{"type": "nektelse", "former": ["ingen"]}, {"type": "tall", "former": ["15"]}, {"type": "navn", "former": ["UDI"]}]	ja
+nn33	nn	kombinert	Forskingsrådet gav aldri meir enn ti prosent i støtte.	[{"type": "nektelse", "former": ["aldri"]}, {"type": "tall", "former": ["10 prosent"]}, {"type": "navn", "former": ["Forskingsrådet", "Forskningsrådet"]}]	ja
+nn34	nn	kombinert	SSB rapporterte ikkje tala for tjuetjuefire.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}, {"type": "tall", "former": ["2024"]}, {"type": "navn", "former": ["SSB"]}]	ja
+nn35	nn	kombinert	Statsforvaltaren svarte ikkje før tjuande april.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}, {"type": "tall", "former": ["20"]}, {"type": "navn", "former": ["Statsforvaltaren", "Statsforvalteren"]}]	ja
+nn36	nn	kombinert	NVE godkjende korkje søknaden eller dei tre klagene.	[{"type": "nektelse", "former": ["korkje", "verken"]}, {"type": "tall", "former": ["3"]}, {"type": "navn", "former": ["NVE"]}]	ja
+nn37	nn	kombinert	Skatteetaten krev ikkje inn dei seks hundre kronene.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}, {"type": "tall", "former": ["600"]}, {"type": "navn", "former": ["Skatteetaten"]}]	ja
+nn38	nn	kombinert	Ingen av dei åtte kommunane har svart Digdir.	[{"type": "nektelse", "former": ["ingen"]}, {"type": "tall", "former": ["8"]}, {"type": "navn", "former": ["Digdir"]}]	ja
+nn39	nn	kombinert	Siva investerte aldri meir enn fem millionar kroner.	[{"type": "nektelse", "former": ["aldri"]}, {"type": "tall", "former": ["5 millionar", "5 millioner", "5000000"]}, {"type": "navn", "former": ["Siva"]}]	ja
+nn40	nn	kombinert	Investinor har ikkje svart på dei tre siste førespurnadene.	[{"type": "nektelse", "former": ["ikkje", "ikke"]}, {"type": "tall", "former": ["3"]}, {"type": "navn", "former": ["Investinor"]}]	ja
+ord01	nb	enkeltord	Skatteetaten	[{"type": "navn", "former": ["Skatteetaten"]}]	nei
+ord02	nb	enkeltord	Lånekassen	[{"type": "navn", "former": ["Lånekassen"]}]	nei
+ord03	nb	enkeltord	Folkehelseinstituttet	[{"type": "navn", "former": ["Folkehelseinstituttet"]}]	nei
+ord04	nb	enkeltord	Arbeidstilsynet	[{"type": "navn", "former": ["Arbeidstilsynet"]}]	nei
+ord05	nb	enkeltord	Statsforvalteren	[{"type": "navn", "former": ["Statsforvalteren"]}]	nei
+ord06	nb	enkeltord	Nasjonalbiblioteket	[{"type": "navn", "former": ["Nasjonalbiblioteket"]}]	nei
+ord07	nb	enkeltord	Datatilsynet	[{"type": "navn", "former": ["Datatilsynet"]}]	nei
+ord08	nb	enkeltord	Patentstyret	[{"type": "navn", "former": ["Patentstyret"]}]	nei
+ord09	nb	enkeltord	Sivilforsvaret	[{"type": "navn", "former": ["Sivilforsvaret"]}]	nei
+ord10	nb	enkeltord	Mattilsynet	[{"type": "navn", "former": ["Mattilsynet"]}]	nei
+ord11	nb	enkeltord	ikke	[{"type": "nektelse", "former": ["ikke"]}]	nei
+ord12	nn	enkeltord	ikkje	[{"type": "nektelse", "former": ["ikkje"]}]	nei
+ord13	nb	enkeltord	aldri	[{"type": "nektelse", "former": ["aldri"]}]	nei
+ord14	nb	enkeltord	ingen	[{"type": "nektelse", "former": ["ingen"]}]	nei
+ord15	nn	enkeltord	korkje	[{"type": "nektelse", "former": ["korkje"]}]	nei
+ord16	nb	enkeltord	femten	[{"type": "tall", "former": ["15"]}]	nei
+ord17	nb	enkeltord	tjuefem	[{"type": "tall", "former": ["25"]}]	nei
+ord18	nb	enkeltord	syttende	[{"type": "tall", "former": ["17"]}]	nei
+ord19	nb	enkeltord	tjuetjuefem	[{"type": "tall", "former": ["2025"]}]	nei
+ord20	nn	enkeltord	fjortande	[{"type": "tall", "former": ["14"]}]	nei

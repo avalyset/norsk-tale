@@ -62,6 +62,7 @@ Innstillingene finnes i `/config` under pluginen:
 | Valg | Standard | Betydning |
 |---|---|---|
 | `modellvalg` | `large` | `large`, `medium` eller `small` |
+| `malform` | `nb` | Målformen whisper skal skrive: `nb` (bokmål, `-l no`), `nn` (nynorsk, `-l nn`) eller `auto` (whisper velger språk). Om `-l nn` faktisk gir nynorsk i whisper.cpp, er ikke målt ennå |
 | `modell` | tom | Sti til `ggml-model.bin`. Tom betyr `~/.cache/norsk-tale/nb-whisper-<modellvalg>.bin` |
 | `whisper` | tom | Navn eller sti til `whisper-cli`. Tom betyr `whisper-cli` på PATH. En eventuell `whisper-server` letes etter i samme mappe, eller på PATH når bare navnet er gitt |
 
@@ -132,6 +133,69 @@ Resultatet vises i panelet «norsk-tale selvtest» og lagres som
 transkribert, men ingen lyd. «Avbryt test» eller `/norsk selvtest avbryt` stopper
 underveis og lagrer det som er gjort. Scoringen (`kalibrering/score.py`) er
 deterministisk og bruker ingen språkmodell.
+
+## Kalibrer for din stemme: `/norsk kalibrer`
+
+Riggen måler hvor godt dikteringen virker for **én taler med én mikrofon**, altså
+deg ved din maskin. Den er et brukerverktøy og ikke en benchmark. Tallene sier noe
+om ditt oppsett, ikke om modellen generelt.
+
+`/norsk kalibrer` starter en liten server som bare lytter på `127.0.0.1`, og åpner
+den i nettleseren. Adressen har et tilfeldig token og vises bare over prompten.
+Serveren stopper når du trykker «Avslutt», eller etter 30 minutter uten bruk.
+
+**Slik går du fram:**
+
+1. Velg modus: fullt manus (100 opptak) eller dialektrunde (20 setninger, 10
+   bokmål og 10 nynorsk, med tall, nektelse og etatsnavn i hver).
+2. Oppgi dialektregion, dialektkilde og foretrukket målform om du vil. Alle tre er
+   valgfrie. Spør ikke etter navn, alder eller annet som identifiserer deg. Velger
+   du region, må du også si om dialekten er **morsmålet** ditt eller **imitert**.
+   Imitert dialekt holdes alltid adskilt fra morsmål og slås aldri sammen.
+3. Kjør mikrofonsjekken. Nivåmåleren skal bevege seg, og testopptaket lagres ikke.
+4. Les én setning om gangen. Du kan ta opp, stoppe, spille av, ta om, hoppe over og
+   gå fram og tilbake. Går du fra halvveis, fortsetter du der du slapp. Hver runde
+   lagres for seg, så du kan ta flere runder, for eksempel med ulike dialekter.
+5. Transkriber når maskinen er ledig. Hvert opptak kjøres med og uten
+   vokabular-prompt, og vises både rått og etter korrektoren. Nynorske setninger
+   kjøres i tillegg med både bokmål og nynorsk som målform, så du ser om en feil
+   skyldes målformen eller hørselen.
+
+**Hva den måler:** Riggen regner ut ordfeilrate (WER) og tegnfeilrate (CER) med
+samme normalisering som NB-Whisper-prosjektet bruker (`kalibrering/norm.py`): små
+bokstaver og tegnsetting fjernet. Den normaliseringen skriver ikke om tall. Når
+manuset sier «to tusen» og whisper skriver «2000», blir det to ordfeil. I tillegg
+gir riggen en feilanalyse som ikke er en score: om nektelser, tall, etatsnavn og
+første ord kom med, og om målformen ble feil. Hver bom vises ordrett, fasit mot
+utdata.
+
+Opptak og resultater lagres i `~/norsk-tale-opptak/<runde>/` og kan slettes med
+knappen på siden. Den lokale rapporten kan lastes ned som JSON eller HTML. Den
+inneholder teksten, men ingen lyd.
+
+## Lukket kalibrering: hva som blir på maskinen, og hva som kan deles
+
+**Blir på maskinen:** Lydopptakene, manus, transkripsjonene og den lokale rapporten
+med ordrette bom. Ingenting av dette sendes noe sted.
+
+**Kan eksporteres:** «Eksporter bidrag» lager en JSON-fil med **bare tall**:
+WER/CER-tellere (ordfeil og referanseord, tegnfeil og referansetegn), feiltelling
+per klasse (nektelse, tall, navn, første ord, målform), antall setninger og talere,
+dialektregion, dialektkilde, målform og modell og versjon. Fila inneholder ingen
+lyd og ingen tekst, verken manus eller det du sa. Du ser hele innholdet før den
+lagres i `~/norsk-tale-opptak/bidrag/`.
+
+**Hvorfor eksporten er anonym:**
+
+- Fila har verken lyd, tekst, navn, alder, tidspunkt eller filstier.
+- Stedet er aldri finere enn region. Et eventuelt målepunkt fjernes automatisk når
+  færre enn tre talere står bak, før du ser eksporten.
+- Tallene beskriver feilrater og kan ikke brukes til å gjenskape hva som ble sagt.
+
+**Slik bidrar du:** Del bidragsfila med prosjektet. `kalibrering/aggreger.py` slår
+sammen mange bidrag til tall per klasse, målform og region, med morsmål og imitert
+i hver sin kolonne. Den viser antall talere per celle og merker celler med færre
+enn tre talere «for få».
 
 ### Kjent begrensning
 

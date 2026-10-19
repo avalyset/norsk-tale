@@ -19,6 +19,9 @@ const angre = atom({ plugin: 'norsk-tale', key: 'angre' } as const, null as Nors
 const laster = atom({ plugin: 'norsk-tale', key: 'laster' } as const, false)
 // Samme verdi som selvtest.ts skriver; validatoren vil ha referansen i fila som leser den.
 const selvtest = atom({ plugin: 'norsk-tale', key: 'selvtest' } as const, null as NorskSelvtest | null)
+// Adressen til kalibreringsriggen. Inneholder et token, så den vises bare i
+// båndet over prompten, aldri i kommandoteksten modellen leser.
+const rigg = atom({ plugin: 'norsk-tale', key: 'rigg' } as const, null as string | null)
 
 type Resultat = {
   verbatim: string
@@ -67,7 +70,8 @@ let malform = 'nb'
 let kontroll: string | undefined
 let lopenr = 0
 let lever = false
-let stoppetVed: number | null = null  // klokka da opptaket stoppet (hendelsen «behandler»)
+let stoppetVed: number | null = null
+let riggLever = false  // klokka da opptaket stoppet (hendelsen «behandler»)
 
 async function sett($: EngineInterface, s: NorskStatus, m: string | null = null) {
   await update($, status, () => s)
@@ -231,6 +235,62 @@ async function oppsett($: EngineInterface): Promise<string> {
   }
 }
 
+async function aapneNettleser($: EngineInterface, url: string): Promise<boolean> {
+  for (const argv of [['open', url], ['xdg-open', url]]) {
+    try {
+      const r = await $.process.run(argv, { timeoutMs: 10000 })
+      if (r.exitCode === 0) return true
+    } catch {
+      // prøv neste
+    }
+  }
+  return false
+}
+
+async function startRigg($: EngineInterface): Promise<string> {
+  if (riggLever) {
+    const url = await read($, rigg)
+    if (url) await aapneNettleser($, url)
+    return 'Kalibreringsriggen kjører allerede. Adressen står over prompten.'
+  }
+  riggLever = true
+  const argv = ['python3', '-I', `${$.plugin.root}/kalibrering/rigg.py`,
+    '--modellvalg', modellvalg, '--modell', modell, '--whisper', whisper]
+  void (async () => {
+    let rest = ''
+    try {
+      for await (const { stream, text } of $.process.spawn({ argv })) {
+        if (stream !== 'stdout') continue
+        rest += text
+        let i = rest.indexOf('\n')
+        while (i >= 0) {
+          const linje = rest.slice(0, i).trim()
+          rest = rest.slice(i + 1)
+          i = rest.indexOf('\n')
+          let h: { type?: string; url?: string } = {}
+          try { h = JSON.parse(linje) } catch { continue }
+          if (h.type === 'klar' && h.url) {
+            const url = h.url
+            await update($, rigg, () => url)
+            const apnet = await aapneNettleser($, url)
+            $.ui.toast(apnet ? 'norsk-tale: kalibreringsriggen er åpnet i nettleseren.'
+              : 'norsk-tale: åpne adressen over prompten i nettleseren.')
+          }
+        }
+      }
+    } catch (feil) {
+      await sett($, 'feil', `Kalibreringsriggen kunne ikke startes (python3): ${String(feil)}`)
+    } finally {
+      riggLever = false
+    }
+    await update($, rigg, () => null)
+  })().catch(() => {
+    // modulen ble lastet ut; riggen stoppes med den
+  })
+  return 'Starter kalibreringsriggen. Den åpnes i nettleseren, og adressen står over prompten. '
+    + 'Alt skjer på denne maskinen.'
+}
+
 async function angreNa($: EngineInterface): Promise<string> {
   const forrige = await read($, angre)
   if (!forrige) return 'Ingenting å angre.'
@@ -249,8 +309,8 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'norsk',
-      description: 'Lokal norsk diktering: start/stopp; «angre», «av» (frigjør modellen), «oppsett», «selvtest»',
-      argumentHint: '[angre|av|oppsett|selvtest]',
+      description: 'Lokal norsk diktering: start/stopp; «angre», «av» (frigjør modellen), «oppsett», «selvtest», «kalibrer»',
+      argumentHint: '[angre|av|oppsett|selvtest|kalibrer]',
       immediate: true,
     })
     return next(e)
@@ -260,6 +320,7 @@ export const register: Register = (on, options) => {
     const arg = e.args.trim().toLowerCase()
     if (arg === 'angre') return { text: await angreNa($) }
     if (arg === 'oppsett') return { text: await oppsett($) }
+    if (arg === 'kalibrer') return { text: await startRigg($) }
     if (arg === 'selvtest') {
       if (await aktivTest($)) return { text: 'Selvtesten pågår allerede. Avbryt med /norsk selvtest avbryt.' }
       return { text: await startSelvtest($) }
@@ -274,7 +335,7 @@ export const register: Register = (on, options) => {
       await sett($, 'av')
       return { text: 'Lytteren er stoppet og modellen frigjort.' }
     }
-    if (arg !== '') return { text: `Ukjent argument «${arg}». Bruk /norsk, /norsk angre, /norsk av, /norsk oppsett eller /norsk selvtest.` }
+    if (arg !== '') return { text: `Ukjent argument «${arg}». Bruk /norsk, /norsk angre, /norsk av, /norsk oppsett, /norsk selvtest eller /norsk kalibrer.` }
     return { text: await veksle($) }
   })
 
@@ -312,6 +373,7 @@ export const register: Register = (on, options) => {
     const a = await read($, angre)
     const l = await read($, laster)
     const st = await read($, selvtest)
+    const riggUrl = await read($, rigg)
     const aktiv = s === 'lytter' || s === 'tale' || s === 'starter'
     const linje = s === 'feil' ? m ?? 'Ukjent feil.' : TEKST[s] + (l && aktiv ? ' Modellen lastes …' : '')
     const knapper = (
@@ -322,7 +384,8 @@ export const register: Register = (on, options) => {
         {linje !== '' && <Text color={s === 'feil' ? 'red' : undefined} dimColor={s !== 'feil'}> {linje}</Text>}
       </Box>
     )
-    if (!st) return knapper
+    const riggLinje = riggUrl ? <Text key="rigg" dimColor>Kalibreringsriggen: {riggUrl}</Text> : null
+    if (!st) return riggLinje ? <Box flexDirection="column">{knapper}{riggLinje}</Box> : knapper
     let tekst1 = ''
     let tekst2 = ''
     const antall = st.setninger.length
@@ -343,6 +406,7 @@ export const register: Register = (on, options) => {
         {knapper}
         <Text key="selvtest1">{tekst1}</Text>
         <Text key="selvtest2" dimColor>{tekst2}</Text>
+        {riggLinje}
       </Box>
     )
   })
