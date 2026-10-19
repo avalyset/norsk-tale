@@ -19,7 +19,7 @@ def start(tmp_path, *ekstra, prefiks=()):
     p = subprocess.Popen([*prefiks, sys.executable, "-I", str(RIGG), "--opptak", str(tmp_path / "opptak"), *ekstra],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     klar = json.loads(p.stdout.readline())
-    m = re.match(r"http://127\.0\.0\.1:(\d+)/([^/]+)/$", klar["url"])
+    m = re.match(r"http://127\.0\.0\.1:(\d+)/\?token=([A-Za-z0-9_-]+)$", klar["url"])
     assert m, klar
     return p, int(m.group(1)), m.group(2)
 
@@ -31,6 +31,10 @@ def server(tmp_path):
     if p.poll() is None:
         p.kill()
         p.wait()
+
+
+def med(token, sti):
+    return sti + ("&" if "?" in sti else "?") + "token=" + token
 
 
 def kall(port, metode, sti, kropp=None, hoder=None, vert=None):
@@ -53,30 +57,31 @@ def test_uten_eller_med_feil_token_er_404(server):
     _, port, token, _ = server
     assert kall(port, "GET", "/")[0].status == 404
     assert kall(port, "GET", "/api/oppsett")[0].status == 404
-    assert kall(port, "GET", "/" + "x" * len(token) + "/")[0].status == 404
-    r, data = kall(port, "GET", f"/{token}/")
+    assert kall(port, "GET", "/?token=" + "x" * len(token))[0].status == 404
+    assert kall(port, "GET", f"/{token}/")[0].status == 404          # token i stien gjelder ikke
+    r, data = kall(port, "GET", med(token, "/"))
     assert r.status == 200 and b"Kalibrer for din stemme" in data
 
 
 def test_feil_host_avvises(server):
     _, port, token, _ = server
-    r, _ = kall(port, "GET", f"/{token}/api/oppsett", vert=f"angriper.example:{port}")
+    r, _ = kall(port, "GET", med(token, f"/api/oppsett"), vert=f"angriper.example:{port}")
     assert r.status == 403
 
 
 def test_post_krever_riktig_origin(server):
     _, port, token, _ = server
     kropp = json.dumps({"modus": "dialekt"})
-    assert kall(port, "POST", f"/{token}/api/runde", kropp, {"Content-Type": "application/json"})[0].status == 403
-    assert kall(port, "POST", f"/{token}/api/runde", kropp,
+    assert kall(port, "POST", med(token, f"/api/runde"), kropp, {"Content-Type": "application/json"})[0].status == 403
+    assert kall(port, "POST", med(token, f"/api/runde"), kropp,
                 {"Origin": "https://angriper.example", "Content-Type": "application/json"})[0].status == 403
-    r, data = kall(port, "POST", f"/{token}/api/runde", kropp, opphav(port))
+    r, data = kall(port, "POST", med(token, f"/api/runde"), kropp, opphav(port))
     assert r.status == 200 and json.loads(data)["modus"] == "dialekt"
 
 
 def test_ingen_cors_og_streng_csp(server):
     _, port, token, _ = server
-    r, _ = kall(port, "GET", f"/{token}/")
+    r, _ = kall(port, "GET", med(token, "/"))
     assert r.getheader("Access-Control-Allow-Origin") is None
     csp = r.getheader("Content-Security-Policy")
     assert "default-src 'none'" in csp and "connect-src 'self'" in csp
@@ -104,9 +109,9 @@ def test_virker_under_forbud_mot_utgaaende_nett(tmp_path):
     assert kontroll.stdout.strip() == "1", kontroll
     p, port, token = start(tmp_path, prefiks=profil)
     try:
-        r, data = kall(port, "GET", f"/{token}/api/oppsett")
+        r, data = kall(port, "GET", med(token, f"/api/oppsett"))
         assert r.status == 200 and len(json.loads(data)["manus"]) == 100
-        r, _ = kall(port, "POST", f"/{token}/api/runde", json.dumps({"modus": "fullt"}), opphav(port))
+        r, _ = kall(port, "POST", med(token, f"/api/runde"), json.dumps({"modus": "fullt"}), opphav(port))
         assert r.status == 200
     finally:
         p.kill()
@@ -125,7 +130,7 @@ def test_stopper_ved_inaktivitet(tmp_path):
 
 def test_avslutt_stopper_serveren(server):
     p, port, token, _ = server
-    r, _ = kall(port, "POST", f"/{token}/api/avslutt", "{}", opphav(port))
+    r, _ = kall(port, "POST", med(token, f"/api/avslutt"), "{}", opphav(port))
     assert r.status == 200
     assert p.wait(timeout=10) == 0
 
@@ -133,7 +138,7 @@ def test_avslutt_stopper_serveren(server):
 # ----------------------------------------------------------------- runder
 def test_dialektkilde_paakrevd_naar_region_er_satt(server):
     _, port, token, _ = server
-    sti = f"/{token}/api/runde"
+    sti = med(token, f"/api/runde")
     r, data = kall(port, "POST", sti, json.dumps({"modus": "dialekt", "dialektregion": "Vestlandet"}), opphav(port))
     assert r.status == 400 and "påkrevd" in json.loads(data)["feil"]
     r, data = kall(port, "POST", sti, json.dumps({"modus": "dialekt", "dialektregion": "Vestlandet",
@@ -146,38 +151,38 @@ def test_dialektkilde_paakrevd_naar_region_er_satt(server):
 def test_dialektrunde_har_20_setninger_fullt_100(server):
     _, port, token, _ = server
     for modus, antall in (("dialekt", 20), ("fullt", 100)):
-        _, data = kall(port, "POST", f"/{token}/api/runde", json.dumps({"modus": modus}), opphav(port))
+        _, data = kall(port, "POST", med(token, f"/api/runde"), json.dumps({"modus": modus}), opphav(port))
         rid = json.loads(data)["id"]
-        _, data = kall(port, "GET", f"/{token}/api/runde?runde={rid}")
+        _, data = kall(port, "GET", med(token, f"/api/runde?runde={rid}"))
         assert len(json.loads(data)["rader"]) == antall
 
 
 @pytest.mark.skipif(not FFMPEG, reason="ffmpeg mangler")
 def test_opptak_lagres_som_16k_mono_og_kan_slettes(server, tmp_path):
     _, port, token, rot = server
-    _, data = kall(port, "POST", f"/{token}/api/runde", json.dumps({"modus": "dialekt"}), opphav(port))
+    _, data = kall(port, "POST", med(token, f"/api/runde"), json.dumps({"modus": "dialekt"}), opphav(port))
     rid = json.loads(data)["id"]
     tone = tmp_path / "tone.ogg"
     subprocess.run([FFMPEG, "-nostdin", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
                     "-ar", "48000", "-c:a", "libopus" if "libopus" in subprocess.run([FFMPEG, "-hide_banner", "-encoders"], capture_output=True, text=True).stdout else "vorbis",
                     "-strict", "-2", str(tone)], check=True)
     hoder = {"Origin": f"http://127.0.0.1:{port}", "Content-Type": "audio/ogg"}
-    r, _ = kall(port, "POST", f"/{token}/api/opptak?runde={rid}&id=nb31", tone.read_bytes(), hoder)
+    r, _ = kall(port, "POST", med(token, f"/api/opptak?runde={rid}&id=nb31"), tone.read_bytes(), hoder)
     assert r.status == 200
     wav = rot / rid / "opptak" / "nb31.wav"
     probe = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=sample_rate,channels",
                             "-of", "csv=p=0", str(wav)], capture_output=True, text=True).stdout.strip()
     assert probe == "16000,1"
-    r, data = kall(port, "GET", f"/{token}/api/opptak?runde={rid}&id=nb31")
+    r, data = kall(port, "GET", med(token, f"/api/opptak?runde={rid}&id=nb31"))
     assert r.status == 200 and r.getheader("Content-Type") == "audio/wav" and data[:4] == b"RIFF"
-    r, data = kall(port, "POST", f"/{token}/api/slett?runde={rid}", "{}", opphav(port))
+    r, data = kall(port, "POST", med(token, f"/api/slett?runde={rid}"), "{}", opphav(port))
     assert json.loads(data)["slettet"] == 1 and not wav.exists()
 
 
 def test_ukjent_manus_id_og_runde_avvises(server):
     _, port, token, _ = server
     hoder = {"Origin": f"http://127.0.0.1:{port}", "Content-Type": "audio/ogg"}
-    r, _ = kall(port, "POST", f"/{token}/api/opptak?runde=../../etc&id=nb01", b"x", hoder)
+    r, _ = kall(port, "POST", med(token, f"/api/opptak?runde=../../etc&id=nb01"), b"x", hoder)
     assert r.status == 400
 
 
@@ -254,3 +259,11 @@ def test_rapport_skiller_malformfeil_fra_horselsfeil(rigg_med_resultat):
     assert any(b["type"] == "målform" and b["malform_valgt"] == "nb" for b in rap["bom"])
     html = riggmod.rapport_html(rap)
     assert "RIFF" not in html and ".wav" not in html
+
+
+def test_siden_avviser_file_og_manglende_token():
+    """Siden sier tydelig fra når den åpnes som fil eller uten token."""
+    html = (ROT / "kalibrering" / "side.html").read_text(encoding="utf-8")
+    assert 'location.protocol === "file:" || !location.host' in html
+    assert "kan ikke åpnes som fil" in html and "mangler token" in html
+    assert '<span id="fulltEtikett">Fullt manus (100 opptak)</span>' in html   # tallet står selv uten JavaScript

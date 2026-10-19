@@ -7,7 +7,8 @@ nettleseren med MediaRecorder, ffmpeg til 16 kHz mono wav), med strammere
 grenser:
 
   - binder bare 127.0.0.1, tilfeldig port
-  - tilfeldig token i URL-en, påkrevd på alle forespørsler (feil token → 404)
+  - tilfeldig token i URL-en (`?token=…`), påkrevd på alle forespørsler
+    (manglende eller feil token → 404)
   - Host må være 127.0.0.1/localhost med riktig port (mot DNS-rebinding)
   - Origin påkrevd og kontrollert på alle POST; ingen CORS-hoder
   - Content-Security-Policy som forbyr eksterne ressurser
@@ -319,16 +320,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if vert not in (f"127.0.0.1:{r.port}", f"localhost:{r.port}"):
             raise Feil(403, "Feil Host.")
         sti = urllib.parse.urlsplit(self.path)
-        deler = sti.path.split("/", 2)
-        if len(deler) < 2 or not secrets.compare_digest(deler[1], r.token):
+        q = dict(urllib.parse.parse_qsl(sti.query))
+        if not secrets.compare_digest(q.pop("token", ""), r.token):
             raise Feil(404, "Ikke funnet.")
         if metode == "POST":
             opphav = self.headers.get("Origin")
             if opphav not in (f"http://127.0.0.1:{r.port}", f"http://localhost:{r.port}"):
                 raise Feil(403, "Feil eller manglende Origin.")
         r.sist = time.monotonic()
-        rest = "/" + (deler[2] if len(deler) > 2 else "")
-        return rest, dict(urllib.parse.parse_qsl(sti.query))
+        return sti.path, q
 
     def _svar(self, status, kropp, ctype="application/json; charset=utf-8", ekstra=None):
         if isinstance(kropp, (dict, list)):
@@ -371,8 +371,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             sti, q = self._vakt("GET")
             r = self.rigg
             if sti == "/":
-                side = SIDE.read_text(encoding="utf-8").replace("__TOKEN__", r.token)
-                return self._svar(200, side, "text/html; charset=utf-8")
+                return self._svar(200, SIDE.read_text(encoding="utf-8"), "text/html; charset=utf-8")
             if sti == "/api/oppsett":
                 return self._svar(200, {
                     "manus": [{k: s[k] for k in ("id", "malform", "klasse", "setning", "dialektutvalg")} for s in r.manus],
@@ -465,7 +464,7 @@ def main(argv=None):
     server = Server(("127.0.0.1", 0), Handler)
     rigg.port = server.server_address[1]
     threading.Thread(target=vakt_inaktivitet, args=(server, rigg), daemon=True).start()
-    print(json.dumps({"type": "klar", "url": f"http://127.0.0.1:{rigg.port}/{rigg.token}/",
+    print(json.dumps({"type": "klar", "url": f"http://127.0.0.1:{rigg.port}/?token={rigg.token}",
                       "opptak": str(rigg.rot)}), flush=True)
     try:
         server.serve_forever()

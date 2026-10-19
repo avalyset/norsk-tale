@@ -60,7 +60,7 @@
     <p class="dim">Ny runde. Alt nedenfor er valgfritt bortsett fra modus. Ingen navn, alder eller annen identifikasjon.</p>
     <label>Modus</label>
     <div class="rad">
-      <label><input type="radio" name="modus" value="fullt" checked> Fullt manus (<span id="antFullt"></span> opptak)</label>
+      <label><input type="radio" name="modus" value="fullt" checked> <span id="fulltEtikett">Fullt manus (100 opptak)</span></label>
       <label><input type="radio" name="modus" value="dialekt"> Dialektrunde (20 setninger)</label>
     </div>
     <label for="region">Dialektregion</label>
@@ -132,13 +132,15 @@
 </main>
 <script>
 "use strict";
-const BASE = location.pathname.replace(/[^/]*$/, "");
 const $ = id => document.getElementById(id);
+// Tokenet står i adressen (?token=…) og følger med på hver forespørsel.
+const TOKEN = new URLSearchParams(location.search).get("token") || "";
+const medToken = sti => sti + (sti.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(TOKEN);
 let OPPSETT = null, RUNDE = null, RADER = [], POS = 0;
 let strom = null, opptaker = null, biter = [], sisteBlob = null, analyse = null;
 
 async function api(sti, valg) {
-  const r = await fetch(BASE + "api/" + sti, valg);
+  const r = await fetch(medToken("/api/" + sti), valg);
   const ct = r.headers.get("Content-Type") || "";
   const data = ct.includes("json") ? await r.json() : await r.blob();
   if (!r.ok) throw new Error((data && data.feil) || ("HTTP " + r.status));
@@ -153,7 +155,7 @@ async function lastOppsett() {
   OPPSETT = await api("oppsett");
   $("rot").textContent = OPPSETT.opptaksrot;
   $("testsetning").textContent = "«" + OPPSETT.testsetning + "»";
-  $("antFullt").textContent = OPPSETT.manus.length;
+  $("fulltEtikett").textContent = `Fullt manus (${OPPSETT.manus.length} opptak)`;
   for (const r of OPPSETT.regioner) $("region").add(new Option(r, r));
   for (const k of OPPSETT.kilder) $("kilde").add(new Option(k, k));
   visTidligere();
@@ -314,7 +316,7 @@ async function visResultat() {
 $("velgVok").onchange = visResultat; $("velgTekst").onchange = visResultat;
 function lastNed(format) {
   const a = document.createElement("a");
-  a.href = BASE + `api/rapport?runde=${encodeURIComponent(RUNDE.id)}&format=${format}&vokabular=${$("velgVok").value}&tekst=${$("velgTekst").value}`;
+  a.href = medToken(`/api/rapport?runde=${encodeURIComponent(RUNDE.id)}&format=${format}&vokabular=${$("velgVok").value}&tekst=${$("velgTekst").value}`);
   a.download = ""; document.body.appendChild(a); a.click(); a.remove();
 }
 $("eksJson").onclick = () => lastNed("json");
@@ -342,7 +344,20 @@ $("avslutt").onclick = async () => {
   document.body.innerHTML = "<main><h1>Riggen er avsluttet.</h1><p>Du kan lukke fanen. Start igjen med /norsk kalibrer.</p></main>";
 };
 
-lastOppsett().catch(e => { $("topstatus").textContent = "Kunne ikke laste: " + e.message; });
+// Siden virker bare når riggen serverer den. Åpnet som fil, eller uten token,
+// sier den fra i stedet for å feile stille.
+function stopp(melding) {
+  document.querySelector("main").innerHTML = "<h1>Kalibrer for din stemme</h1><p class=\"feil\"><b>" + melding +
+    "</b></p><p>Start riggen fra Claude Code med <code>/norsk kalibrer</code>. Den åpner riktig adresse i nettleseren.</p>";
+}
+// file:, data: og blob: har ingen vert; bare riggens egen adresse har det.
+if (location.protocol === "file:" || !location.host) {
+  stopp("Denne siden kan ikke åpnes som fil. Den må åpnes av kalibreringsriggen.");
+} else if (!TOKEN) {
+  stopp("Adressen mangler token. Bruk adressen riggen åpnet, eller den som står over prompten i Claude Code.");
+} else {
+  lastOppsett().catch(e => { $("topstatus").textContent = "Kunne ikke laste: " + e.message; });
+}
 </script>
 </body>
 </html>

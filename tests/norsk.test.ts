@@ -182,7 +182,7 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
 
 describe('norsk-tale: /norsk kalibrer', () => {
   test('starter riggen, åpner nettleseren og holder tokenet utenfor kommandoteksten', async ($, on) => {
-    const url = 'http://127.0.0.1:50123/hemmeligtoken/'
+    const url = 'http://127.0.0.1:50123/?token=hemmeligtoken'
     const spawns: string[][] = []
     const kjort: string[][] = []
     mock.env(on, { TMPDIR: '/tmp/test/' })
@@ -206,6 +206,6 @@ describe('norsk-tale: /norsk kalibrer', () => {
     expect(spawns[0]?.some(a => a.endsWith('/kalibrering/rigg.py'))).toBe(true)
     expect(kjort).toContainEqual(['open', url])
     const ui = await band($, 'terminal')
-    expect(await ui.find({ type: 'Text', text: /Kalibreringsriggen: http:\/\/127\.0\.0\.1:50123\/hemmeligtoken\// })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /Kalibreringsriggen: http:\/\/127\.0\.0\.1:50123\/\?token=hemmeligtoken/ })).toBeDefined()
   })
 })
