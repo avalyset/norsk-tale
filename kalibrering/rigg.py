@@ -15,7 +15,14 @@ grenser:
   - stopper etter 30 min uten forespørsler, eller ved «Avslutt»
 
 Opptak og resultater lagres under ~/norsk-tale-opptak/<runde>/, aldri i repoet.
-Transkripsjon startes bare når brukeren ber om det. Bare standardbiblioteket,
+Transkripsjon startes bare når brukeren ber om det.
+
+Fanen «Selvtest» er den guidede akseptansetesten: seks kjente setninger
+(selvtest/setninger.tsv) leses inn med mikrofonen i nettleseren, transkriberes
+med den samme kjernen og scores med score.py (nektelse, tall, navn, første ord,
+målform; setning 6 kjøres med nynorsk), og stopp-tidene måles. Lyden lagres
+ikke: den konverteres i en midlertidig mappe og slettes. Resultatet skrives som
+selvtest-<tid>.json i opptaksmappen. Bare standardbiblioteket,
 pluss ffmpeg og whisper.cpp via kjernen.
 """
 import argparse
@@ -43,6 +50,8 @@ import score  # noqa: E402
 
 PLUGIN_VERSJON = json.loads((ROT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))["version"]
 MANUS = HER / "manus_v1.tsv"
+SELVTEST = ROT / "selvtest" / "setninger.tsv"
+SLUTT = ("stillhet", "knapp", "tak")
 SIDE = HER / "side.html"
 REGIONER = ["Østlandet", "Sørlandet", "Vestlandet", "Trøndelag", "Nord-Norge", "annet"]
 KILDER = ["morsmål", "imitert"]
@@ -74,6 +83,10 @@ class Rigg:
         self.jobb = {"kjorer": False, "runde": None, "ferdig": 0, "totalt": 0, "feil": None}
         self.las = threading.Lock()
         self.port = None
+        self.selvtest_setninger = score.les_setninger(SELVTEST)
+        self.selvtest = None          # {"startet", "modell", "resultater": {id: rad}} mens en test pågår
+        self.selvtest_opptatt = False
+        self._sha = {}
 
     # ------------------------------------------------------------------ runder
     def runde_dir(self, runde_id):
@@ -279,6 +292,108 @@ class Rigg:
         return {"ok": True, "fil": str(f)}
 
 
+    # --------------------------------------------------------------- selvtest
+    def selvtest_oversikt(self):
+        return {"setninger": [{k: s[k] for k in ("id", "malform", "setning")} for s in self.selvtest_setninger],
+                "pagar": self.selvtest is not None}
+
+    def selvtest_start(self):
+        self.selvtest = {"startet": datetime.datetime.now().isoformat(timespec="seconds"), "modell": None,
+                         "resultater": {}}
+        return self.selvtest_oversikt()
+
+    def selvtest_opptak(self, setning_id, data, ctype, slutt, stillhet_ms, kjor=None):
+        """Ett opptak av én setning: til wav i en midlertidig mappe, kjernen med
+        setningens målform, scoring. Lyden slettes med mappen."""
+        if self.selvtest is None:
+            raise Feil(409, "Start selvtesten først.")
+        s = next((x for x in self.selvtest_setninger if x["id"] == setning_id), None)
+        if s is None:
+            raise Feil(400, "Ukjent setning.")
+        if slutt not in SLUTT:
+            raise Feil(400, "Ukjent slutt.")
+        if stillhet_ms in (None, ""):
+            stillhet_ms = None
+        elif str(stillhet_ms).isdigit():
+            stillhet_ms = int(stillhet_ms)
+        else:
+            raise Feil(400, "Ugyldig stillhet_ms.")
+        with self.las:
+            if self.jobb["kjorer"] or self.selvtest_opptatt:
+                raise Feil(409, "En transkripsjon kjører allerede.")
+            self.selvtest_opptatt = True
+        try:
+            oppsett = dataclasses.replace(kjerne.standard_oppsett(**self.konfig), malform=s["malform"])
+            nokkel = str(oppsett.modell)
+            if nokkel not in self._sha:
+                self._sha[nokkel] = kjerne.verifiser_modell(oppsett.modell, oppsett.sha256)
+            sha = self._sha[nokkel]
+            endelse = ".webm" if "webm" in ctype else ".mp4" if "mp4" in ctype else ".ogg" if "ogg" in ctype else ".lyd"
+            with tempfile.TemporaryDirectory(prefix="norsk-tale-") as tmp:
+                kilde = pathlib.Path(tmp) / f"inn{endelse}"
+                kilde.write_bytes(data)
+                wav = pathlib.Path(tmp) / "lyd.wav"
+                kjerne.til_wav(kilde, wav)
+                r = (kjor or kjerne.transkriber)(wav, oppsett, sha=sha)
+        finally:
+            self.selvtest_opptatt = False
+            self.sist = time.monotonic()
+        # Det dikteringen ville satt inn i promptboksen: løpende tekst.
+        utdata = re.sub(r"\s*\n\s*", " ", r["korrigert"]).strip()
+        rad = {"id": s["id"], "setning": s["setning"], "malform": s["malform"], "utdata": utdata,
+               "verbatim": r["verbatim"], "slutt": slutt, "stillhet_ms": stillhet_ms,
+               "malform_valgt": s["malform"], "stopp_til_tekst_ms": None,
+               "score": score.score_setning(s, utdata), "scorefeil": None}
+        self.selvtest["modell"] = {"modellvalg": oppsett.modellvalg, "modell_sha256": sha,
+                                   "kjerne_versjon": kjerne.VERSJON, "norsk_tale_versjon": PLUGIN_VERSJON}
+        self.selvtest["resultater"][s["id"]] = rad
+        return rad
+
+    def selvtest_lagre(self, data):
+        """Skriver selvtest-<tid>.json i opptaksmappen og avslutter testen.
+        `tider` er stopp→tekst i ms per setning, målt i nettleseren."""
+        if self.selvtest is None:
+            raise Feil(409, "Ingen selvtest pågår.")
+        avbrutt = bool(data.get("avbrutt"))
+        for sid, ms in (data.get("tider") or {}).items():
+            rad = self.selvtest["resultater"].get(str(sid))
+            if rad is not None and isinstance(ms, (int, float)) and ms >= 0:
+                rad["stopp_til_tekst_ms"] = int(ms)
+        rekkefolge = [s["id"] for s in self.selvtest_setninger]
+        resultater = [self.selvtest["resultater"][i] for i in rekkefolge if i in self.selvtest["resultater"]]
+        naa = datetime.datetime.now()
+        rapport = {"norsk_tale_selvtest": 1, "kilde": "rigg", "tidspunkt": naa.isoformat(timespec="seconds"),
+                   "avbrutt": avbrutt, "modell": self.selvtest["modell"],
+                   "oppsummering": oppsummer_selvtest(resultater), "resultater": resultater,
+                   "merknad": ("Ingen lyd er lagret. utdata er kjernens korrigerte tekst, slik dikteringen "
+                               "setter den inn. stopp_til_tekst_ms er målt i nettleseren fra opptaket "
+                               "stoppet til teksten kom tilbake.")}
+        kjerne.krev_montert(self.rot)
+        self.rot.mkdir(parents=True, exist_ok=True)
+        f = self.rot / f"selvtest-{naa:%Y-%m-%dT%H%M%S}.json"
+        f.write_text(json.dumps(rapport, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        self.selvtest = None
+        return {"ok": True, "fil": str(f), "oppsummering": rapport["oppsummering"]}
+
+
+def oppsummer_selvtest(resultater):
+    """Som Claude Code-selvtestens oppsummering: hvert målelement og første ord er
+    én sjekk; målform i motsatt form er et funn, ikke en bom."""
+    bestatt = sjekker = 0
+    funn = []
+    for r in resultater:
+        sc = r["score"]
+        for e in sc["elementer"]:
+            sjekker += 1
+            bestatt += e["treff"]
+        sjekker += 1
+        bestatt += sc["forste_innholdsord"]["treff"]
+        if sc["malform"]["funn"]:
+            funn.append(f"Setning {r['id']}: forventet målform {sc['malform']['forventet']}, fikk "
+                        f"{sc['malform']['utdata']} (whisper kjørt med {r['malform_valgt']}).")
+    return {"bestatt": bestatt, "sjekker": sjekker, "funn": funn}
+
+
 def rapport_html(rapport):
     e = html.escape
     rader = []
@@ -397,6 +512,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self._svar(200, rap, ekstra={"Content-Disposition": f'attachment; filename="{navn}.json"'})
             if sti == "/api/bidrag":
                 return self._svar(200, r.bidrag(q.get("runde")))
+            if sti == "/api/selvtest":
+                return self._svar(200, r.selvtest_oversikt())
             raise Feil(404, "Ikke funnet.")
         except Feil as e:
             self._svar(e.status, {"feil": str(e)})
@@ -423,6 +540,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self._svar(200, r.lagre_bidrag(q.get("runde")))
             if sti == "/api/slett":
                 return self._svar(200, r.slett_opptak(q.get("runde") or None))
+            if sti == "/api/selvtest/start":
+                return self._svar(200, r.selvtest_start())
+            if sti == "/api/selvtest/opptak":
+                data = self._les()
+                if not data:
+                    raise Feil(400, "Tomt opptak.")
+                return self._svar(200, r.selvtest_opptak(q.get("id"), data, self.headers.get("Content-Type", ""),
+                                                         q.get("slutt"), q.get("stillhet_ms")))
+            if sti == "/api/selvtest/lagre":
+                return self._svar(200, r.selvtest_lagre(self._json()))
             if sti == "/api/avslutt":
                 self._svar(200, {"ok": True})
                 threading.Thread(target=self.server.shutdown, daemon=True).start()
@@ -444,7 +571,7 @@ class Server(http.server.ThreadingHTTPServer):
 def vakt_inaktivitet(server, rigg, intervall=1.0):
     while True:
         time.sleep(intervall)
-        if not rigg.jobb["kjorer"] and time.monotonic() - rigg.sist > rigg.inaktiv_s:
+        if not rigg.jobb["kjorer"] and not rigg.selvtest_opptatt and time.monotonic() - rigg.sist > rigg.inaktiv_s:
             server.shutdown()
             return
 

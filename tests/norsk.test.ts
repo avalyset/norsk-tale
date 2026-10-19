@@ -85,7 +85,7 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
         : []), { text: 'Oppsummer:', cursor: 10 })
 
       const ui = await band($, surface)
-      expect((await ui.find({ key: 'norsk' }))?.text).toBe('🎙 Norsk')
+      expect((await ui.find({ key: 'norsk' }))?.text).toBe('🎙 Norsk (ctrl+x tab, n)')
       await ui.press({ key: 'norsk' })
       await vent()
 
@@ -118,9 +118,31 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
     const ui = await band($, 'terminal')
     await ui.press({ key: 'norsk' })
     await vent()
-    expect((await ui.find({ key: 'norsk' }))?.text).toBe('■ Stopp')
+    expect((await ui.find({ key: 'norsk' }))?.text).toBe('■ Stopp (ctrl+x tab, n)')
     await ui.press({ key: 'norsk' })
     expect(rec.kommandoer.map(k => k.split('=')[1])).toEqual(['start', 'stopp'])
+  })
+
+  test('tastatur: hurtigtaster på knappene, snarveien i knappeteksten, også med tekst i boksen', async ($, on) => {
+    const rec = rig(on, ord => (ord === 'start' ? [linje({ type: 'tekst', slutt: 'trykk', resultat: RESULTAT })] : []),
+      { text: 'Et utkast', cursor: 9 })
+    for (const surface of ['terminal', 'desktop'] as const) {
+      const ui = await band($, surface)
+      const knapp = await ui.find({ key: 'norsk' })
+      expect(knapp?.props.hotkey).toBe('n')
+      expect(knapp?.text).toContain('ctrl+x tab, n')
+      await ui.unmount()
+    }
+    const ui = await band($, 'terminal')
+    await ui.press({ key: 'norsk' })                      // som n etter ctrl+x tab: utkastet står
+    await vent()
+    expect(rec.fills).toEqual([{ text: ' Vi trenger tre eksemplarer, ikke fire.', mode: 'insert' }])
+    const angre = await ui.find({ key: 'angre' })
+    expect(angre?.props.hotkey).toBe('a')
+    expect(angre?.text).toBe('Angre (a)')
+    await ui.press({ key: 'angre' })
+    expect(rec.fills.at(-1)).toEqual({ text: 'Et utkast', mode: 'replace' })
+    expect(rec.submits).toEqual([])
   })
 
   test('manglende modell gir én tydelig feilmelding og ingen innsetting', async ($, on) => {

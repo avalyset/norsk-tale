@@ -118,13 +118,19 @@ null-signal i ett sekund, sier norsk-tale fra og ber deg sjekke tilgangen.
 
 - **Trykk** «🎙 Norsk» eller skriv `/norsk`. Mikrofonen er lukket til du trykker.
   Modellen lastes først når du trykker, og det tar noen sekunder.
+- **Tastatur:** `ctrl+x tab` og så `n`. `ctrl+x tab` er Claude Codes egen snarvei
+  for å flytte fokus til båndet over prompten. Den virker også når det står tekst i
+  promptboksen, og i terminaler som ikke sender museklikk. I båndet trykker `n`
+  «🎙 Norsk» (start og stopp), `a` «Angre» og `x` «Avbryt test». Ingen av disse
+  bokstavene er bundet i båndet fra før. Esc tar deg tilbake til prompten.
+  Snarveien står i knappeteksten.
 - **Stopp** med et nytt trykk. Opptaket stopper også av seg selv etter 1,5 sekunder
   stillhet etter tale, og senest etter 2 minutter. 0,5 sekunder før taleinnsatsen
   beholdes, så første stavelse ikke klippes.
 - **Teksten** settes inn ved markøren. Det du alt har skrevet står urørt, og
   pluginen sender aldri inn prompten for deg.
-- **Angre:** knappen «Angre» eller `/norsk angre` setter prompten tilbake slik den
-  var før dikteringen. **Esc virker ikke**, fordi en mod ikke kan se Esc-tasten når
+- **Angre:** knappen «Angre» (`a` i båndet) eller `/norsk angre` setter prompten
+  tilbake slik den var før dikteringen. **Esc virker ikke**, fordi en mod ikke kan se Esc-tasten når
   det står tekst i promptboksen.
 - **Skrivemåter** korrektoren ikke har lov til å avgjøre, vises som
   `⟦feilform → forslag?⟧`. Da velger du selv.
@@ -134,33 +140,38 @@ null-signal i ett sekund, sier norsk-tale fra og ber deg sjekke tilgangen.
 
 ## Sjekk at det virker: `/norsk selvtest`
 
-Selvtesten prøver hele dikteringsveien på din maskin: samme mikrofon,
-stillhetsvakt, modell, korrektor og innsetting som ved vanlig bruk.
+Selvtesten i Claude Code prøver selve veien inn i promptboksen, med én diktering:
 
-1. Tøm promptboksen og skriv `/norsk selvtest`.
-2. Over prompten vises én setning om gangen, seks i alt, der den siste er på
-   nynorsk. Trykk «🎙 Norsk», les setningen og vent til opptaket stopper av seg
-   selv.
-3. Til slutt ber testen deg trykke «Angre».
+1. Tøm promptboksen og skriv `/norsk selvtest`. Testen setter `TEST: ` i boksen.
+2. Trykk `ctrl+x tab` og så `n` (eller «🎙 Norsk»), si en kort setning og vent til
+   opptaket stopper av seg selv.
+3. Trykk `a` (Angre).
 
-Før hvert opptak setter testen `TEST-N: ` i promptboksen. Etter innsettingen leser
-den boksen og sjekker:
+Testen sjekker at teksten kom inn etter prefikset, og at Angre gir tilbake
+`TEST: `. Så tømmes boksen. Mens testen pågår, sendes ingenting inn. Trykker du
+Enter, blir det stoppet. Resultatet vises i panelet «norsk-tale selvtest» og
+lagres som `~/norsk-tale-opptak/selvtest-claude-<tidspunkt>.json`, uten lyd.
+`x` («Avbryt test») eller `/norsk selvtest avbryt` stopper underveis.
+
+### Seks-setningstesten: fanen «Selvtest» i `/norsk kalibrer`
+
+Den grundige testen ligger i kalibreringsriggen. Start `/norsk kalibrer`, velg
+fanen «Selvtest» i nettleseren og trykk «Start selvtest». Du leser seks kjente
+setninger med mikrofonen i nettleseren, og den siste er på nynorsk. Hvert opptak
+stopper av seg selv etter 1,5 s stillhet etter tale, eller med «Stopp». Det
+transkriberes med den samme kjernen som dikteringen, og setning 6 kjøres med
+nynorsk. Testen sjekker:
 
 - at nektelser, tall og etatsnavn kom med (tall som sifre eller ord)
 - at første ord ikke er klippet bort
-- at prefikset står urørt foran teksten
-- at Angre gir tilbake `TEST-6: `
+- målformen: kom den nynorske setningen ut på bokmål, står det som et funn, ikke
+  som en feil
 
-Den rapporterer også hvor lenge det gikk fra siste tale til opptaket stoppet (målet
-er 1,5 s), og fra stopp til tekst i boksen. Kom den nynorske setningen ut på
-bokmål, står det som et funn, ikke som en feil.
-
-Mens testen pågår, sendes ingenting inn. Trykker du Enter, blir det stoppet.
-Resultatet vises i panelet «norsk-tale selvtest» og lagres som
-`~/norsk-tale-opptak/selvtest-<tidspunkt>.json`. Fila inneholder teksten som ble
-transkribert, men ingen lyd. «Avbryt test» eller `/norsk selvtest avbryt` stopper
-underveis og lagrer det som er gjort. Scoringen (`kalibrering/score.py`) er
-deterministisk og bruker ingen språkmodell.
+Den måler også tiden fra siste tale til opptaket stoppet (målet er 1,5 s), og fra
+stopp til tekst. Lyden lagres ikke: den konverteres i en midlertidig mappe som
+slettes. Resultatet lagres som `selvtest-<tidspunkt>.json` i opptaksmappen, som
+kan ligge på et eksternt volum (innstillingen `opptak`). Scoringen
+(`kalibrering/score.py`) er deterministisk og bruker ingen språkmodell.
 
 ## Kalibrer for din stemme: `/norsk kalibrer`
 
@@ -264,6 +275,29 @@ opptaket ligge utenfor repoet:
 ```bash
 NORSK_TALE_TESTLYD=/sti/til/opptak.m4a NORSK_TALE_MODELL=/sti/til/ggml-model.bin NORSK_TALE_WHISPER=/sti/til/whisper-cli python3 -m pytest tests
 ```
+
+### Interaktive testøkter og autooppdatering
+
+En interaktiv `claude`-økt kan oppdatere Claude Code i bakgrunnen. Ved
+native-installasjon bytter den da `~/.local/bin/claude`, også når økten er startet
+fra en annen binær, for eksempel den som følger med Claude-appen. Slik hindrer du
+det for en testøkt:
+
+```bash
+DISABLE_AUTOUPDATER=1 claude --plugin-dir .
+```
+
+- `DISABLE_AUTOUPDATER=1` (eller `DISABLE_UPDATES=1`, som også stopper `claude
+  update`) må stå i miljøet til selve `claude`-prosessen.
+- `"autoUpdates": false` i `~/.claude.json` **holder ikke** ved
+  native-installasjon. Når `autoUpdatesProtectedForNative` er satt, ser
+  oppdatereren bort fra den (målt i koden til 2.1.303).
+- «Updated to latest. Got …» ved oppstart er utgivelsesnotater. Meldingen vises
+  første gang en versjon nyere enn `lastReleaseNotesSeen` i `~/.claude.json`
+  starter, også når oppdatering er slått av. Den betyr ikke at noe ble lastet ned
+  i den økten.
+- Sjekk før og etter: `ls ~/.local/share/claude/versions` og
+  `readlink ~/.local/bin/claude`.
 
 ## Kreditering
 

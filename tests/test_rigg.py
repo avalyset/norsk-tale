@@ -311,3 +311,103 @@ def test_rigg_starter_ikke_paa_umontert_volum(tmp_path):
     assert p.returncode == 5
     assert json.loads(p.stdout.splitlines()[0])["type"] == "feil"
     assert not pathlib.Path("/Volumes/norsk-tale-finnes-ikke").exists()
+
+
+# ------------------------------------------------------------------ selvtest
+def falsk_selvtest_kjor(kall):
+    svar = {"1": "Jeg har ikke betalt de 3450 kronene til Skatteetaten ennå.",
+            "6": "Jeg har ikke fått svar fra Statsforvalteren om de tre søknadene."}
+
+    def kjor(wav, oppsett, sha=None):
+        assert wav.is_file() and wav.suffix == ".wav"
+        kall.append(oppsett.malform)
+        t = svar.get(kall_id[0], "Ingen av de sju sakene hos NAV ble avvist i 2025.")
+        return {"verbatim": t, "korrigert": t.replace(" ennå", "\nennå"), "substitusjonslogg": [],
+                "modell_sha256": "f" * 64, "versjon": "0"}
+    kall_id = [""]
+    return kjor, kall_id
+
+
+@pytest.fixture
+def selvrigg(tmp_path, monkeypatch):
+    r = riggmod.Rigg(tmp_path / "opptak", {}, inaktiv_s=60)
+    monkeypatch.setattr(riggmod.kjerne, "verifiser_modell", lambda sti, f: f)
+    ekte = riggmod.kjerne.standard_oppsett(modell=str(tmp_path / "m.bin"))
+    monkeypatch.setattr(riggmod.kjerne, "standard_oppsett", lambda **k: ekte)
+    monkeypatch.setattr(riggmod.kjerne, "til_wav", lambda kilde, wav: shutil.copy(kilde, wav))
+    return r
+
+
+def test_selvtest_i_riggen_scorer_seks_setninger_og_lagrer_json_uten_lyd(selvrigg, tmp_path):
+    r = selvrigg
+    oversikt = r.selvtest_start()
+    assert [s["id"] for s in oversikt["setninger"]] == ["1", "2", "3", "4", "5", "6"]
+    assert oversikt["setninger"][5]["malform"] == "nn"
+    kall = []
+    kjor, kall_id = falsk_selvtest_kjor(kall)
+    for s in oversikt["setninger"]:
+        kall_id[0] = s["id"]
+        rad = r.selvtest_opptak(s["id"], b"RIFFfalsk", "audio/webm", "stillhet", "1500", kjor=kjor)
+        assert rad["slutt"] == "stillhet" and rad["stillhet_ms"] == 1500
+    assert kall == ["nb"] * 5 + ["nn"]                          # setning 6 kjøres med nynorsk
+    ut = r.selvtest_lagre({"avbrutt": False, "tider": {"1": 2300, "6": 2100}})
+    fil = pathlib.Path(ut["fil"])
+    assert fil.parent == tmp_path / "opptak" and re.match(r"selvtest-\d{4}-\d{2}-\d{2}T\d{6}\.json$", fil.name)
+    rap = json.loads(fil.read_text(encoding="utf-8"))
+    assert rap["norsk_tale_selvtest"] == 1 and rap["kilde"] == "rigg" and rap["avbrutt"] is False
+    rader = {x["id"]: x for x in rap["resultater"]}
+    assert list(rader) == ["1", "2", "3", "4", "5", "6"]
+    assert rader["1"]["utdata"].endswith("kronene til Skatteetaten ennå.")   # løpende tekst, som i promptboksen
+    assert rader["1"]["stopp_til_tekst_ms"] == 2300 and rader["2"]["stopp_til_tekst_ms"] is None
+    assert {e["type"] for e in rader["1"]["score"]["elementer"]} >= {"nektelse", "tall", "navn"}
+    assert "forste_innholdsord" in rader["1"]["score"]
+    assert rader["6"]["score"]["malform"] == {"forventet": "nn", "utdata": "nb", "funn": True}
+    assert rap["oppsummering"]["funn"] == ["Setning 6: forventet målform nn, fikk nb (whisper kjørt med nn)."]
+    assert rap["oppsummering"]["sjekker"] > rap["oppsummering"]["bestatt"] > 0
+    tekst = json.dumps(rap, ensure_ascii=False)
+    assert "RIFF" not in tekst and ".wav" not in tekst and "base64" not in tekst
+    assert not list((tmp_path / "opptak").rglob("*.wav")) and not list((tmp_path / "opptak").rglob("*.webm"))
+    assert r.selvtest is None
+
+
+def test_selvtest_krever_start_og_gyldige_verdier(selvrigg):
+    r = selvrigg
+    kjor, _ = falsk_selvtest_kjor([])
+    with pytest.raises(riggmod.Feil) as e:
+        r.selvtest_opptak("1", b"x", "audio/webm", "stillhet", None, kjor=kjor)
+    assert e.value.status == 409
+    r.selvtest_start()
+    for args in (("9", "stillhet", None), ("1", "noe", None), ("1", "stillhet", "-5")):
+        with pytest.raises(riggmod.Feil) as e:
+            r.selvtest_opptak(args[0], b"x", "audio/webm", args[1], args[2], kjor=kjor)
+        assert e.value.status == 400
+    r.jobb["kjorer"] = True                                     # en kalibreringsrunde transkriberer
+    with pytest.raises(riggmod.Feil) as e:
+        r.selvtest_opptak("1", b"x", "audio/webm", "knapp", None, kjor=kjor)
+    assert e.value.status == 409
+
+
+def test_selvtest_endepunktene_krever_token_og_origin(server):
+    p, port, token, _ = server
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    c.request("GET", "/api/selvtest", headers={"Host": f"127.0.0.1:{port}"})
+    assert c.getresponse().status == 404
+    c.close()
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    c.request("GET", f"/api/selvtest?token={token}", headers={"Host": f"127.0.0.1:{port}"})
+    svar = c.getresponse()
+    data = json.loads(svar.read())
+    assert svar.status == 200 and len(data["setninger"]) == 6 and data["pagar"] is False
+    c.close()
+    c = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    c.request("POST", f"/api/selvtest/start?token={token}", body=b"{}", headers={"Host": f"127.0.0.1:{port}"})
+    assert c.getresponse().status == 403                        # mangler Origin
+    c.close()
+
+
+def test_siden_har_selvtestfane_skjult_til_den_velges():
+    html = (ROT / "kalibrering" / "side.html").read_text(encoding="utf-8")
+    assert re.search(r'<section id="fanSelv"[^>]*\bhidden\b', html)
+    assert 'id="fanSelvKnapp"' in html and ">Selvtest<" in html
+    for sti in ("selvtest/start", "selvtest/opptak", "selvtest/lagre"):
+        assert sti in html

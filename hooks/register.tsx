@@ -10,7 +10,8 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { NorskAngre, NorskSelvtest, NorskStatus } from '../types'
 import {
-  PANE, aktivTest, avslutt, etterAngre, etterInnsetting, opptaksmappe, oppsummer, settOpptaksmappe, startSelvtest, tabell,
+  PANE, PREFIKS, aktivTest, avslutt, etterAngre, etterInnsetting, opptaksmappe, oppsummer, settOpptaksmappe, startSelvtest,
+  tabell,
 } from './selvtest'
 
 const status = atom({ plugin: 'norsk-tale', key: 'status' } as const, 'av' as NorskStatus)
@@ -52,6 +53,14 @@ const TEKST: Record<NorskStatus, string> = {
   feil: '',
 }
 
+// Tastatur: ctrl+x tab (Claude Codes egen «abovePrompt:focus») flytter fokus til
+// båndet, også når promptboksen har tekst; der trykker en bokstav knappen. Ingen
+// bokstav er bundet i AbovePrompt-konteksten, så de kolliderer ikke. Esc går
+// tilbake til prompten. Snarveien står i knappeteksten, for terminaler som ikke
+// sender museklikk.
+export const TAST = { norsk: 'n', angre: 'a', avbryt: 'x' } as const
+export const FOKUS = 'ctrl+x tab'
+
 // Mellomrom der teksten møter det brukeren alt har skrevet, så ord ikke limes.
 export function medMellomrom(utkast: string, markor: number, tekst: string): string {
   const for_ = utkast.slice(0, markor)
@@ -70,8 +79,7 @@ let malform = 'nb'
 let kontroll: string | undefined
 let lopenr = 0
 let lever = false
-let stoppetVed: number | null = null
-let riggLever = false  // klokka da opptaket stoppet (hendelsen «behandler»)
+let riggLever = false
 
 async function sett($: EngineInterface, s: NorskStatus, m: string | null = null) {
   await update($, status, () => s)
@@ -93,7 +101,7 @@ async function kommando($: EngineInterface, ord: string) {
   await $.fs.write(`${kontroll}/${lopenr}.cmd`, ord)
 }
 
-async function settInn($: EngineInterface, h: { slutt: string; resultat: Resultat; stillhet_ms?: number | null; malform?: string }) {
+async function settInn($: EngineInterface, h: { slutt: string; resultat: Resultat }) {
   const r = h.resultat
   // Kjernen gir én linje per whisper-segment; i promptboksen er det løpende tekst.
   const tekst = r.korrigert.replace(/\s*\n\s*/g, ' ').trim()
@@ -108,16 +116,9 @@ async function settInn($: EngineInterface, h: { slutt: string; resultat: Resulta
     mode: 'insert',
   })
   if (fylt.isFilled) {
-    const naa = await $.clock.now()
     await update($, angre, () => ({ text: boks.text, cursor: boks.cursor }))
     await sett($, 'av')
-    const maltTest = await etterInnsetting($, {
-      verbatim: r.verbatim, slutt: h.slutt, stillhet_ms: h.stillhet_ms ?? null, malform_valgt: h.malform ?? malform,
-      stopp_til_tekst_ms: stoppetVed === null ? null : naa - stoppetVed,
-    })
-    const st = await aktivTest($)
-    // Mellom setningene hører ikke Angre hjemme: bare det siste steget bruker den.
-    if (maltTest && st && st.steg <= st.setninger.length) await update($, angre, () => null)
+    await etterInnsetting($)
   } else {
     await sett($, 'feil', 'Promptboksen tok ikke imot teksten (en dialog er åpen?). Ingenting ble sendt.')
   }
@@ -138,7 +139,6 @@ async function hendelse($: EngineInterface, h: Hendelse) {
     case 'tale':
       return sett($, 'tale')
     case 'behandler':
-      stoppetVed = await $.clock.now()
       return sett($, 'behandler')
     case 'tom':
       await sett($, 'av')
@@ -212,10 +212,7 @@ async function veksle($: EngineInterface): Promise<string> {
   if (st && !st.aktiv) await update($, selvtest, () => null)   // gammel oppsummering bort
   await startLytter($)
   await sett($, 'starter')
-  // Under selvtesten styrer setningens målform whisper (setning 6 kjøres med nn).
-  const test = await aktivTest($)
-  const set = test && test.steg <= test.setninger.length ? test.setninger[test.steg - 1] : undefined
-  await kommando($, set && set.malform !== malform ? `start:${set.malform}` : 'start')
+  await kommando($, 'start')
   return 'Lytter på norsk. Trykk igjen, eller 1,5 s stillhet, for å stoppe.'
 }
 
@@ -348,7 +345,7 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  // Under selvtesten sendes ingenting inn: Enter på «TEST-N: …» stoppes her.
+  // Under selvtesten sendes ingenting inn: Enter på «TEST: …» stoppes her.
   // Ellers gjør en ny innsending den gamle angre-tilstanden meningsløs.
   on('prompt.submit', async ($, e, next) => {
     if (!e.command && (await aktivTest($))) {
@@ -382,9 +379,11 @@ export const register: Register = (on, options) => {
     const linje = s === 'feil' ? m ?? 'Ukjent feil.' : TEKST[s] + (l && aktiv ? ' Modellen lastes …' : '')
     const knapper = (
       <Box>
-        <Button key="norsk" label={aktiv ? '■ Stopp' : '🎙 Norsk'} onPress={() => veksle($)} />
-        {a !== null && <Button key="angre" label="Angre" onPress={() => angreNa($)} />}
-        {st?.aktiv && <Button key="avbryt" label="Avbryt test" onPress={() => avslutt($, true)} />}
+        <Button key="norsk" hotkey={TAST.norsk} label={`${aktiv ? '■ Stopp' : '🎙 Norsk'} (${FOKUS}, ${TAST.norsk})`}
+          onPress={() => veksle($)} />
+        {a !== null && <Button key="angre" hotkey={TAST.angre} label={`Angre (${TAST.angre})`} onPress={() => angreNa($)} />}
+        {st?.aktiv && <Button key="avbryt" hotkey={TAST.avbryt} label={`Avbryt test (${TAST.avbryt})`}
+          onPress={() => avslutt($, true)} />}
         {linje !== '' && <Text color={s === 'feil' ? 'red' : undefined} dimColor={s !== 'feil'}> {linje}</Text>}
       </Box>
     )
@@ -392,17 +391,15 @@ export const register: Register = (on, options) => {
     if (!st) return riggLinje ? <Box flexDirection="column">{knapper}{riggLinje}</Box> : knapper
     let tekst1 = ''
     let tekst2 = ''
-    const antall = st.setninger.length
-    if (st.aktiv && st.steg <= antall) {
-      const set = st.setninger[st.steg - 1]
-      tekst1 = `Selvtest – setning ${st.steg} av ${antall}${set?.malform === 'nn' ? ' (nynorsk)' : ''}: «${set?.setning ?? ''}»`
-      tekst2 = 'Trykk 🎙 Norsk, les setningen og vent. Ikke trykk Enter: ingenting sendes inn.'
+    if (st.aktiv && st.steg === 'dikter') {
+      tekst1 = `Selvtest – trykk ${FOKUS} og så ${TAST.norsk} (eller 🎙 Norsk), si en kort setning og vent.`
+      tekst2 = 'Ikke trykk Enter: ingenting sendes inn. Seks-setningstesten ligger i /norsk kalibrer → Selvtest.'
     } else if (st.aktiv) {
-      tekst1 = 'Selvtest – siste steg: trykk Angre.'
-      tekst2 = `Testen sjekker at prompten blir «TEST-${antall}: » igjen, og tømmer den etterpå.`
+      tekst1 = `Selvtest – trykk Angre (${TAST.angre}).`
+      tekst2 = `Testen sjekker at prompten blir «${PREFIKS}» igjen, og tømmer den etterpå.`
     } else {
       const o = oppsummer(st)
-      tekst1 = `Selvtest ${st.avbrutt ? 'avbrutt' : 'ferdig'}: ${o.bestatt} av ${o.sjekker} sjekker bestått${o.funn.length ? `, ${o.funn.length} funn` : ''}.`
+      tekst1 = `Selvtest ${st.avbrutt ? 'avbrutt' : 'ferdig'}: ${o.bestatt} av ${o.sjekker} sjekker bestått.`
       tekst2 = st.fil ? `Detaljer i panelet «norsk-tale selvtest». Lagret: ${st.fil}` : `Resultatet ble ikke lagret: ${st.lagringsfeil ?? 'ukjent'}`
     }
     return (

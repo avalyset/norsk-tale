@@ -40,6 +40,11 @@
   .skjult { display: none; }
   [hidden] { display: none !important; }
   .vakt { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
+  .faner { display: flex; gap: 4px; border-bottom: 1px solid var(--strek); margin: 16px 0 0; }
+  .faner button { border: 1px solid var(--strek); border-bottom: none; border-radius: 8px 8px 0 0; background: transparent; }
+  .faner button[aria-selected="true"] { background: var(--kort); font-weight: 600; }
+  .sjekker { list-style: none; padding: 0; margin: 8px 0 0; }
+  .sjekker li { margin: 2px 0; }
 </style>
 </head>
 <body>
@@ -55,6 +60,11 @@
   <h1>Kalibrer for din stemme</h1>
   <p class="dim">norsk-tale måler hvordan dikteringen virker for <b>deg</b> og <b>din mikrofon</b>. Dette er et brukerverktøy, ikke en benchmark.</p>
 
+  <div class="faner" role="tablist">
+    <button role="tab" id="fanKalKnapp" aria-selected="true" aria-controls="fanKal">Kalibrering</button>
+    <button role="tab" id="fanSelvKnapp" aria-selected="false" aria-controls="fanSelv">Selvtest</button>
+  </div>
+
   <div class="kort">
     <p><b>Alt skjer på denne maskinen.</b> Opptak lagres i <code id="rot">~/norsk-tale-opptak</code> og kan slettes her.</p>
     <div class="rad">
@@ -64,6 +74,7 @@
     </div>
   </div>
 
+  <section id="fanKal" role="tabpanel" aria-labelledby="fanKalKnapp">
   <div class="kort" id="kortOppsett">
     <h2>1. Runde</h2>
     <div id="tidligere"></div>
@@ -139,6 +150,34 @@
     <div class="rad"><button id="visBidrag">Vis bidraget</button><button class="hoved" id="lagreBidrag" disabled>Lagre bidraget</button><span id="bidragStatus" class="dim"></span></div>
     <pre id="bidrag" class="skjult"></pre>
   </div>
+  </section>
+
+  <section id="fanSelv" role="tabpanel" aria-labelledby="fanSelvKnapp" hidden>
+  <div class="kort">
+    <h2>Selvtest</h2>
+    <p>Seks kjente setninger leses inn med mikrofonen her i nettleseren og transkriberes med den samme kjernen som dikteringen. Testen sjekker nektelse, tall, navn og første ord, målform (setning 6 er nynorsk og kjøres med nynorsk) og stopp-tiden.</p>
+    <p class="dim">Opptaket stopper selv etter 1,5 s stillhet etter tale, eller med Stopp. Lyden lagres ikke. Resultatet lagres som <code>selvtest-…json</code> i opptaksmappen. Selve innsettingen i promptboksen og Angre testes med <code>/norsk selvtest</code> i Claude Code.</p>
+    <div class="rad"><button class="hoved" id="selvStart">Start selvtest</button><span id="selvStatus" class="dim"></span></div>
+  </div>
+  <div class="kort skjult" id="selvKort">
+    <div class="rad"><span id="selvFremdrift"></span> <span class="merke" id="selvInfo"></span></div>
+    <p class="setning" id="selvSetning"></p>
+    <div class="maler"><div id="selvNivaa"></div></div>
+    <div class="rad">
+      <button class="hoved" id="selvOpp">Ta opp</button>
+      <button id="selvStopp" disabled>Stopp</button>
+      <button id="selvNeste" disabled>Neste setning</button>
+      <button class="fare" id="selvAvbryt">Avbryt</button>
+    </div>
+    <p id="selvOppStatus" class="dim"></p>
+    <div id="selvRes"></div>
+  </div>
+  <div class="kort skjult" id="selvFerdig">
+    <h2>Resultat</h2>
+    <p id="selvOppsummering"></p>
+    <table id="selvTabell"></table>
+  </div>
+  </section>
 </main>
 <script>
 "use strict";
@@ -353,6 +392,103 @@ $("avslutt").onclick = async () => {
   await post("avslutt"); if (strom) strom.getTracks().forEach(t => t.stop());
   document.body.innerHTML = "<div class=\"vakt\"><h1>Riggen er avsluttet.</h1><p>Du kan lukke fanen. Start igjen med /norsk kalibrer.</p></div>";
 };
+
+// ----------------------------------------------------------------- faner
+function visFane(selv) {
+  $("fanKal").hidden = selv; $("fanSelv").hidden = !selv;
+  $("fanKalKnapp").setAttribute("aria-selected", String(!selv));
+  $("fanSelvKnapp").setAttribute("aria-selected", String(selv));
+}
+$("fanKalKnapp").onclick = () => visFane(false);
+$("fanSelvKnapp").onclick = () => visFane(true);
+
+// --------------------------------------------------------------- selvtest
+// Samme funksjonelle sjekker som dikteringen: kjernen transkriberer, score.py
+// scorer. Stopp etter 1,5 s stillhet etter tale (som lytteren), ellers Stopp.
+const STILLHET_MS = 1500, MAKS_MS = 30000;
+let SELV = null, SPOS = 0, selvOpptaker = null, selvTider = {}, selvRader = [];
+function nivaa() {
+  const buf = new Float32Array(analyse.fftSize); analyse.getFloatTimeDomainData(buf);
+  let s = 0; for (const x of buf) s += x * x; return Math.sqrt(s / buf.length);
+}
+function visSelvRad() {
+  const s = SELV.setninger[SPOS];
+  $("selvFremdrift").textContent = `Setning ${SPOS + 1} av ${SELV.setninger.length}`;
+  $("selvInfo").textContent = s.malform === "nn" ? "nynorsk" : "bokmål";
+  $("selvSetning").textContent = s.setning;
+  $("selvOpp").disabled = false; $("selvStopp").disabled = true; $("selvNeste").disabled = true;
+  $("selvOppStatus").textContent = ""; $("selvRes").innerHTML = "";
+}
+$("selvStart").onclick = async () => {
+  try { await aapneMik(); } catch (e) { $("selvStatus").textContent = mikFeil(e); $("selvStatus").className = "feil"; return; }
+  try { SELV = await post("selvtest/start"); } catch (e) { $("selvStatus").textContent = e.message; $("selvStatus").className = "feil"; return; }
+  SPOS = 0; selvTider = {}; selvRader = [];
+  $("selvStatus").textContent = ""; $("selvStart").disabled = true;
+  $("selvKort").classList.remove("skjult"); $("selvFerdig").classList.add("skjult");
+  visSelvRad();
+};
+function selvOpp() {
+  const s = SELV.setninger[SPOS];
+  $("selvOpp").disabled = true; $("selvStopp").disabled = false;
+  $("selvOppStatus").className = "dim"; $("selvOppStatus").textContent = "Måler støynivået …";
+  // Terskel: tre ganger støygulvet de første 300 ms, med et tak, som lytteren.
+  const start = performance.now(); let gulv = 0, n = 0, terskel = null, sistTale = null, slutt = null, stillhet = null;
+  const t = setInterval(() => {
+    const r = nivaa(), naa = performance.now();
+    $("selvNivaa").style.width = Math.min(100, r * 400) + "%";
+    if (naa - start < 300) { gulv += r; n++; return; }
+    if (terskel === null) { terskel = Math.min(Math.max(3 * gulv / Math.max(1, n), 0.01), 0.05); $("selvOppStatus").textContent = "Les setningen nå."; }
+    if (r > terskel) sistTale = naa;
+    if (sistTale !== null && naa - sistTale >= STILLHET_MS) { slutt = "stillhet"; stillhet = Math.round(naa - sistTale); stopp(); }
+    else if (naa - start >= MAKS_MS) { slutt = "tak"; stopp(); }
+  }, 50);
+  let stoppetVed = null;
+  function stopp() { clearInterval(t); if (selvOpptaker && selvOpptaker.state === "recording") { stoppetVed = performance.now(); selvOpptaker.stop(); } }
+  $("selvStopp").onclick = () => { slutt = slutt || "knapp"; stopp(); };
+  selvOpptaker = nyOpptaker(async blob => {
+    $("selvStopp").disabled = true;
+    $("selvOppStatus").textContent = "Transkriberer lokalt …";
+    const q = `selvtest/opptak?id=${encodeURIComponent(s.id)}&slutt=${slutt}` + (stillhet === null ? "" : `&stillhet_ms=${stillhet}`);
+    try {
+      const rad = await post(q, blob, blob.type);
+      const ms = Math.round(performance.now() - (stoppetVed ?? performance.now()));
+      selvTider[s.id] = ms; rad.stopp_til_tekst_ms = ms;
+      selvRader = selvRader.filter(x => x.id !== s.id).concat([rad]);
+      visSelvResultat(rad);
+      $("selvOppStatus").textContent = "";
+      if (SPOS < SELV.setninger.length - 1) { $("selvNeste").disabled = false; $("selvOpp").disabled = false; $("selvOpp").textContent = "Ta om"; }
+      else await selvLagre(false);
+    } catch (e) { $("selvOppStatus").textContent = "Feil: " + e.message; $("selvOppStatus").className = "feil"; $("selvOpp").disabled = false; }
+  });
+}
+$("selvOpp").onclick = selvOpp;
+$("selvNeste").onclick = () => { SPOS++; $("selvOpp").textContent = "Ta opp"; visSelvRad(); };
+$("selvAvbryt").onclick = () => selvLagre(true);
+const merke = ok => ok ? "✔" : "✘";
+const sek = ms => ms === null || ms === undefined ? "–" : (ms / 1000).toFixed(1).replace(".", ",") + " s";
+function sjekkListe(rad) {
+  const sc = rad.score, li = [];
+  for (const e of sc.elementer) li.push(`<li class="${e.treff ? "ok" : "feil"}">${merke(e.treff)} ${escape(e.type)}: ${escape(e.former[0])}${e.treff ? "" : " (mangler)"}</li>`);
+  li.push(`<li class="${sc.forste_innholdsord.treff ? "ok" : "feil"}">${merke(sc.forste_innholdsord.treff)} første ord: ${escape(sc.forste_innholdsord.ord ?? "–")}</li>`);
+  li.push(`<li class="${sc.malform.funn ? "feil" : "dim"}">målform: forventet ${sc.malform.forventet}, fikk ${sc.malform.utdata}${sc.malform.funn ? " (funn)" : ""}</li>`);
+  li.push(`<li class="dim">${rad.slutt === "stillhet" ? "stillhet→stopp " + sek(rad.stillhet_ms) : "stopp: " + escape(rad.slutt)} · stopp→tekst ${sek(rad.stopp_til_tekst_ms)}</li>`);
+  return `<ul class="sjekker">${li.join("")}</ul>`;
+}
+function visSelvResultat(rad) {
+  $("selvRes").innerHTML = `<p><b>Utdata:</b> «${escape(rad.utdata)}»</p>` + sjekkListe(rad);
+}
+async function selvLagre(avbrutt) {
+  if (!SELV) return;
+  try {
+    const r = await post("selvtest/lagre", JSON.stringify({ avbrutt, tider: selvTider }));
+    const o = r.oppsummering;
+    $("selvOppsummering").textContent = `Selvtest ${avbrutt ? "avbrutt" : "ferdig"}: ${o.bestatt} av ${o.sjekker} sjekker bestått${o.funn.length ? ", " + o.funn.length + " funn" : ""}. Lagret: ${r.fil}`;
+    $("selvTabell").innerHTML = selvRader.map(x => `<tr><td>${escape(x.id)}</td><td>«${escape(x.utdata)}»${sjekkListe(x)}</td></tr>`).join("") +
+      o.funn.map(f => `<tr><td></td><td class="bom">${escape(f)}</td></tr>`).join("");
+    $("selvFerdig").classList.remove("skjult"); $("selvKort").classList.add("skjult");
+  } catch (e) { $("selvStatus").textContent = e.message; $("selvStatus").className = "feil"; }
+  SELV = null; $("selvStart").disabled = false;
+}
 
 // Appen vises bare når riggen serverer siden: riktig vert og token i adressen.
 // file:, data: og blob: har ingen vert. Uten JavaScript blir meldingen stående.
