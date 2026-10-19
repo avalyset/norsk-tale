@@ -20,7 +20,8 @@ const BAND = {
 
 // Stubber under modden: lytterprosessen (som venter på kommandofilene modden
 // skriver), promptboksen, innsending og toasts — alt registrert.
-const rig = (on: On, svar: (ord: string) => ProcessSpawnChunk[], utkast = { text: '', cursor: 0 }) => {
+const rig = (on: On, svar: (ord: string) => ProcessSpawnChunk[], utkast = { text: '', cursor: 0 }, sjekk = 'Alt er på plass.') => {
+  const kjoringer: string[][] = []
   const spawns: string[][] = []
   const kommandoer: string[] = []
   const fills: { text: string; mode: string }[] = []
@@ -48,6 +49,10 @@ const rig = (on: On, svar: (ord: string) => ProcessSpawnChunk[], utkast = { text
     }
     return { value: { code: 0, signal: null } as ProcessSpawnResult }
   })
+  on('process.run', ($, e) => {
+    kjoringer.push([...e.argv])
+    return { value: { exitCode: 0, stdout: JSON.stringify({ ok: true, melding: sjekk }), stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+  })
   on('prompt.read', () => ({ value: utkast }))
   on('prompt.fill', ($, e) => {
     fills.push({ text: e.text, mode: e.mode })
@@ -62,7 +67,7 @@ const rig = (on: On, svar: (ord: string) => ProcessSpawnChunk[], utkast = { text
     return { value: undefined }
   })
   on('ui.render', ($, e) => $.ui.resolve(e).Box({}))
-  return { spawns, kommandoer, fills, submits, toasts }
+  return { spawns, kommandoer, fills, submits, toasts, kjoringer }
 }
 
 // Testmiljøet har en tidtaker, men typene uten DOM/Node nevner den ikke.
@@ -84,8 +89,8 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
       await vent()
 
       expect(rec.spawns.length).toBe(1)
-      expect(rec.spawns[0]).toContain('-I')
-      expect(rec.spawns[0]?.at(-1)).toBe('~/norskriber')
+      expect(rec.spawns[0]?.slice(0, 2)).toEqual(['python3', '-I'])
+      expect(rec.spawns[0]?.slice(-6)).toEqual(['--modellvalg', 'large', '--modell', '', '--whisper', 'whisper-cli'])
       expect(rec.kommandoer).toEqual(['/tmp/test/norsk-tale-okt-1/1.cmd=start'])
       // segmentlinjene blir løpende tekst, og et mellomrom skiller fra utkastet
       expect(rec.fills).toEqual([{ text: ' Vi trenger tre eksemplarer, ikke fire.', mode: 'insert' }])
@@ -118,7 +123,7 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
   })
 
   test('manglende modell gir én tydelig feilmelding og ingen innsetting', async ($, on) => {
-    const melding = 'Fant ikke modellen: /Users/x/whisper.cpp/models/nb-large.bin'
+    const melding = 'Fant ikke modellen: /modeller/nb-whisper-large.bin'
     const rec = rig(on, ord => (ord === 'start' ? [linje({ type: 'feil', melding })] : []))
     const ui = await band($, 'terminal')
     await ui.press({ key: 'norsk' })
@@ -135,6 +140,33 @@ describe('norsk-tale: diktering inn i promptboksen', () => {
     await vent()
     expect(rec.fills).toEqual([])
     expect(rec.toasts).toEqual(['norsk-tale: hørte ingen tale.'])
+  })
+
+  test('lytteren startes først ved trykk, ikke ved øktstart', async ($, on) => {
+    const rec = rig(on, () => [])
+    await $.session.start({ source: 'startup' } as never).catch(() => undefined)
+    const ui = await band($, 'terminal')
+    expect(rec.spawns).toEqual([])
+    await ui.press({ key: 'norsk' })
+    expect(rec.spawns.length).toBe(1)
+  })
+
+  test('userConfig går videre til lytteren', { options: { modellvalg: 'small', modell: '/modeller/nb-small.bin', whisper: '/opt/bin/whisper-cli' } }, async ($, on) => {
+    const rec = rig(on, () => [])
+    const ui = await band($, 'terminal')
+    await ui.press({ key: 'norsk' })
+    expect(rec.spawns[0]?.slice(-6)).toEqual(['--modellvalg', 'small', '--modell', '/modeller/nb-small.bin', '--whisper', '/opt/bin/whisper-cli'])
+  })
+
+  test('/norsk oppsett kjører sjekken og laster ikke ned noe', async ($, on) => {
+    const melding = 'Modellen mangler: /modeller/m.bin\n  NbAiLab/nb-whisper-large, ggml-model.bin, 3.10 GB. Ingenting lastes ned automatisk.'
+    const rec = rig(on, () => [], { text: '', cursor: 0 }, melding)
+    const r = await $.command.run({ command: 'norsk', args: 'oppsett', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+    expect(r.text).toBe(melding)
+    expect(rec.kjoringer.length).toBe(1)
+    expect(rec.kjoringer[0]).toContain('--sjekk')
+    expect(rec.kjoringer[0]?.some(a => a.endsWith('/kjerne/kjerne.py'))).toBe(true)
+    expect(rec.spawns).toEqual([])
   })
 
   test('/norsk veksler, /norsk angre uten noe å angre sier det', async ($, on) => {

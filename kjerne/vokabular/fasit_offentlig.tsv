@@ -1,0 +1,25 @@
+# norsk-tale — fasit for offentlige entiteter (fra NORSKRIBER v2.2).
+# Ingen personnavn og ingen private aktører.
+#
+# klasse    styrer HANDLING: ikkeord = substituer stille | kollisjon = flagg, aldri stille
+# feilklasse styrer MÅLING:  garble = lyden bærer formen, dekodingen bommet
+#                            lyd-tvetydig = samme uttale; valget er språkmodellens prior
+#                            usikker = et menneske avgjør
+#
+# INVARIANT: feilklasse=usikker => klasse=kollisjon. Håndheves av korriger.py.
+# Feilformene er observert i NB-Whisper-utdata; tabellen er retningsgivende, ikke validert.
+#
+korrekt_form	feilform	klasse	feilklasse
+Innovasjon Norge	Norsk-Norge	kollisjon	garble
+Innovasjon Norge	Norsk Norge	kollisjon	garble
+Innovasjon Norge	Nasjonal-Norge	kollisjon	garble
+Innovasjon Norge	Internasjonalt Norge	kollisjon	garble
+Innovasjon Norge	Inorsk Norge	ikkeord	garble
+Innovasjon Norge	Nasjonalbanken	kollisjon	garble
+Innovasjon Norge	nasjonalgåsa	kollisjon	usikker
+Akershus	Aksjels	ikkeord	garble
+Forskningsrådet	Horskningsrådet	ikkeord	garble
+ORCID	Orsted	kollisjon	garble
+ORCID	Orchid	kollisjon	lyd-tvetydig
+IIIF	trippelIF	kollisjon	lyd-tvetydig
+Investinor	InvestNord	kollisjon	garble

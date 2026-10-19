@@ -1,0 +1,23 @@
+norsk-tale
+Copyright 2026 Eirik Botten Nicolaysen, EcoDeco AS
+
+Lisensiert under Apache License, versjon 2.0 (se LICENSE).
+
+Kjernen (kjerne/) er utgått fra NORSKRIBER av samme forfatter.
+
+Tredjepartskomponenter som norsk-tale bruker, men ikke inneholder eller distribuerer:
+
+NB-Whisper (NbAiLab/nb-whisper-large, nb-whisper-medium, nb-whisper-small)
+  Nasjonalbiblioteket (National Library of Norway), Apache License 2.0.
+  https://huggingface.co/NbAiLab/nb-whisper-large
+  Modellvektene følger ikke med norsk-tale; brukeren laster dem ned selv.
+  Modellkortet minner om at attribusjonskravene i åndsverkloven gjelder for
+  nedlastinger gjort i Norge.
+
+whisper.cpp
+  Georgi Gerganov og bidragsytere, MIT-lisens.
+  https://github.com/ggml-org/whisper.cpp
+  Installeres separat (for eksempel brew install whisper-cpp).
+
+FFmpeg
+  FFmpeg-utviklerne, LGPL/GPL. Installeres separat.

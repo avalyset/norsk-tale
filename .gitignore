@@ -19,3 +19,7 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 node_modules/
+
+# Private vokabular- og fasitfiler hører aldri hjemme her
+lokal.txt
+fasit_lokal.tsv

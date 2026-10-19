@@ -1,22 +1,38 @@
 {
   "name": "norsk-tale",
+  "displayName": "Norsk tale",
   "version": "0.1.0",
-  "description": "Lokal norsk tale-til-tekst i promptboksen via NORSKRIBER (whisper.cpp + NB-Whisper). Lyden forlater ikke maskinen.",
-  "author": { "name": "Eirik Botten Nicolaysen", "email": "eirik@ecodeco.no" },
+  "description": "Lokal norsk diktering i Claude Code med NB-Whisper og whisper.cpp. Lyden forlater ikke maskinen.",
+  "author": { "name": "Eirik Botten Nicolaysen, EcoDeco AS", "email": "eirik@ecodeco.no" },
+  "homepage": "https://github.com/avalyset/norsk-tale",
+  "repository": "https://github.com/avalyset/norsk-tale",
   "license": "Apache-2.0",
+  "keywords": ["norsk", "diktering", "tale-til-tekst", "whisper", "nb-whisper", "lokal"],
+  "icon": "./assets/icon.png",
+  "documentationUrl": "https://github.com/avalyset/norsk-tale#readme",
+  "supportUrl": "https://github.com/avalyset/norsk-tale/issues",
+  "privacyPolicyUrl": "https://github.com/avalyset/norsk-tale/blob/main/PRIVACY.md",
+  "termsOfServiceUrl": "https://github.com/avalyset/norsk-tale/blob/main/LICENSE",
   "types": "./types/index.d.ts",
   "userConfig": {
-    "norskriber": {
+    "modellvalg": {
       "type": "string",
-      "title": "NORSKRIBER-katalog",
-      "description": "Katalogen som holder kjerne.py og modell.lock.json.",
-      "default": "~/norskriber"
+      "title": "NB-Whisper-modell",
+      "description": "Hvilken NbAiLab/nb-whisper-modell som brukes: large (3,10 GB), medium (1,53 GB) eller small (0,49 GB).",
+      "options": ["large", "medium", "small"],
+      "default": "large"
     },
-    "python": {
+    "modell": {
       "type": "string",
-      "title": "Python",
-      "description": "Python 3-tolken som kjører lytteren.",
-      "default": "python3"
+      "title": "Modellfil",
+      "description": "Sti til ggml-model.bin for valgt modell. Tom: ~/.cache/norsk-tale/nb-whisper-<modellvalg>.bin. SHA256 sjekkes mot verdien Hugging Face publiserer.",
+      "default": ""
+    },
+    "whisper": {
+      "type": "string",
+      "title": "whisper-cli",
+      "description": "Navn eller sti til whisper-cli fra whisper.cpp. En eventuell whisper-server (holder modellen lastet) letes etter i samme mappe, eller på PATH når bare navnet er gitt.",
+      "default": "whisper-cli"
     }
   }
 }

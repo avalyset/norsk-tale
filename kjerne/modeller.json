@@ -1,0 +1,21 @@
+{
+  "_merknad": "NbAiLab sine ferdige ggml-filer på Hugging Face. sha256 og bytes er verdiene HF publiserer (LFS oid) for ggml-model.bin, hentet 2026-10-19. Ingen vekter i repoet.",
+  "large": {
+    "repo": "NbAiLab/nb-whisper-large",
+    "fil": "ggml-model.bin",
+    "bytes": 3095033483,
+    "sha256": "0f2f66f22e11a7c7da3c582d8e5c89cb2c0011753ba9c7c9731e320a4ba33e76"
+  },
+  "medium": {
+    "repo": "NbAiLab/nb-whisper-medium",
+    "fil": "ggml-model.bin",
+    "bytes": 1533763076,
+    "sha256": "f73141401d203ee77fc7ddf7bf97926a8a85fe85faa6066a6920e4815f48a73d"
+  },
+  "small": {
+    "repo": "NbAiLab/nb-whisper-small",
+    "fil": "ggml-model.bin",
+    "bytes": 487601984,
+    "sha256": "a0fc1555f5bd51044b0ea88bb9b7891e1ee331a8087eddb0afc3a05839db48ab"
+  }
+}

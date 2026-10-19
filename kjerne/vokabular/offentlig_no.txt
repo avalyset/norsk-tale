@@ -1,0 +1,32 @@
+# norsk-tale — norsk offentlig vokabular, sendt til whisper som --prompt.
+# Kun etater, offentlige tjenester og tekniske akronymer.
+# Personnavn og private aktører hører aldri hjemme her.
+# Én form per linje.
+NAV
+Skatteetaten
+Helfo
+Lånekassen
+UDI
+Innovasjon Norge
+Forskningsrådet
+Investinor
+Siva
+Digdir
+KS
+Nasjonalbiblioteket
+Patentstyret
+Datatilsynet
+Statsforvalteren
+Folkehelseinstituttet
+NVE
+DSB
+Sivilforsvaret
+Kartverket
+SSB
+Arbeidstilsynet
+Mattilsynet
+Husbanken
+Enova
+Akershus
+ORCID
+IIIF

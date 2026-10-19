@@ -1,9 +1,9 @@
 // norsk-tale — lokal norsk tale-til-tekst i promptboksen.
 //
-// Tynn adapter: modden eier knappen, kommandoen og promptboksen. Mikrofon og
-// stillhet eier lytteren (lytter/norsk_lytter.py); modell, SHA-sjekk og
-// korrektur eier NORSKRIBER-kjernen. Ingen LLM i rensingen, ingen sky, og
-// modden sender aldri inn prompten.
+// Tynn adapter: modden eier knappen, kommandoen og promptboksen. Mikrofon,
+// stillhet og modellens livsløp eier lytteren (lytter/norsk_lytter.py); modell,
+// SHA-sjekk og korrektur eier kjernen (kjerne/). Ingen LLM i rensingen, ingen
+// sky, og modden sender aldri inn prompten. Lytteren startes ved første trykk.
 
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
@@ -27,6 +27,7 @@ type Hendelse =
   | { type: 'oppe'; feil: string | null }
   | { type: 'laster' }
   | { type: 'modell_klar'; modell_sha256: string }
+  | { type: 'frigjort'; etter_s: number }
   | { type: 'lytter' }
   | { type: 'tale' }
   | { type: 'behandler'; slutt: string }
@@ -54,8 +55,9 @@ export function medMellomrom(utkast: string, markor: number, tekst: string): str
 }
 
 // Modulens egen tilstand: nullstilles ved omlasting, som lytterprosessen.
-let python = 'python3'
-let norskriber = '~/norskriber'
+let modellvalg = 'large'
+let modell = ''
+let whisper = 'whisper-cli'
 let kontroll: string | undefined
 let lopenr = 0
 let lever = false
@@ -105,6 +107,7 @@ async function hendelse($: EngineInterface, h: Hendelse) {
   switch (h.type) {
     case 'oppe':
     case 'modell_klar':
+    case 'frigjort':
       await update($, laster, () => false)
       return
     case 'laster':
@@ -143,8 +146,8 @@ async function startLytter($: EngineInterface) {
   if (lever) return
   lever = true
   const kontroll = await sikreKontroll($)
-  const argv = [python, '-I', `${$.plugin.root}/lytter/norsk_lytter.py`,
-    '--kontroll', kontroll, '--norskriber', norskriber]
+  const argv = ['python3', '-I', `${$.plugin.root}/lytter/norsk_lytter.py`,
+    '--kontroll', kontroll, ...konfigArgv()]
   void (async () => {
     let rest = ''
     try {
@@ -160,7 +163,7 @@ async function startLytter($: EngineInterface) {
         }
       }
     } catch (feil) {
-      await sett($, 'feil', `Lytteren kunne ikke startes med «${python}»: ${String(feil)}`)
+      await sett($, 'feil', `Lytteren kunne ikke startes (python3): ${String(feil)}`)
     } finally {
       lever = false
     }
@@ -190,6 +193,22 @@ async function veksle($: EngineInterface): Promise<string> {
   return 'Lytter på norsk. Trykk igjen, eller 1,5 s stillhet, for å stoppe.'
 }
 
+// userConfig til kjernen, likt for lytteren og /norsk oppsett.
+function konfigArgv(): string[] {
+  return ['--modellvalg', modellvalg, '--modell', modell, '--whisper', whisper]
+}
+
+async function oppsett($: EngineInterface): Promise<string> {
+  const argv = ['python3', '-I', `${$.plugin.root}/kjerne/kjerne.py`, '--sjekk', ...konfigArgv()]
+  try {
+    const r = await $.process.run(argv, { timeoutMs: 120000 })
+    const rapport = JSON.parse(r.stdout) as { melding: string }
+    return rapport.melding
+  } catch (feil) {
+    return `Oppsettsjekken kunne ikke kjøres (python3): ${String(feil)}`
+  }
+}
+
 async function angreNa($: EngineInterface): Promise<string> {
   const forrige = await read($, angre)
   if (!forrige) return 'Ingenting å angre.'
@@ -199,34 +218,35 @@ async function angreNa($: EngineInterface): Promise<string> {
 }
 
 export const register: Register = (on, options) => {
-  python = String(options.python ?? 'python3')
-  norskriber = String(options.norskriber ?? '~/norskriber')
+  modellvalg = String(options.modellvalg ?? 'large')
+  modell = String(options.modell ?? '')
+  whisper = String(options.whisper ?? 'whisper-cli')
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'norsk',
-      description: 'Lokal norsk diktering: start/stopp, «angre» setter prompten tilbake, «av» laster ut modellen',
-      argumentHint: '[angre|av]',
+      description: 'Lokal norsk diktering: start/stopp; «angre», «av» (frigjør modellen), «oppsett» (sjekk installasjonen)',
+      argumentHint: '[angre|av|oppsett]',
       immediate: true,
     })
-    await startLytter($)
     return next(e)
   })
 
   on('command.run', { command: 'norsk' }, async ($, e) => {
     const arg = e.args.trim().toLowerCase()
     if (arg === 'angre') return { text: await angreNa($) }
+    if (arg === 'oppsett') return { text: await oppsett($) }
     if (arg === 'av') {
       await kommando($, 'avslutt')
       await sett($, 'av')
-      return { text: 'Lytteren er stoppet og modellen lastet ut.' }
+      return { text: 'Lytteren er stoppet og modellen frigjort.' }
     }
-    if (arg !== '') return { text: `Ukjent argument «${arg}». Bruk /norsk, /norsk angre eller /norsk av.` }
+    if (arg !== '') return { text: `Ukjent argument «${arg}». Bruk /norsk, /norsk angre, /norsk av eller /norsk oppsett.` }
     return { text: await veksle($) }
   })
 
   on('session.end', async ($, e, next) => {
-    await kommando($, 'avslutt')
+    if (lever) await kommando($, 'avslutt')
     return next(e)
   })
 

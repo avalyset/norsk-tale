@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """norsk-tale — resident lytter for Claude Code-modden.
 
-Tynn adapter rundt NORSKRIBER-kjernen. Den eier tre ting kjernen ikke eier:
+Tynn adapter rundt kjernen (kjerne/). Den eier tre ting kjernen ikke eier:
 mikrofonen, stillhetsvakten og protokollen mot modden. Selve transkripsjonen
 (modell-SHA, whisper, korrektur) er `kjerne.Resident` — den dupliseres ikke her.
 
@@ -9,7 +9,7 @@ mikrofonen, stillhetsvakten og protokollen mot modden. Selve transkripsjonen
     «stopp», 1,5 s stillhet etter tale, eller taket på 2 min
   - 0,5 s pre-roll: lyden før taleinnsatsen som beholdes, så første stavelse
     ikke klippes når den ledende stillheten skjæres bort
-  - modellen lastes ved første trykk og blir liggende til økten slutter
+  - modellen lastes ved første trykk og frigjøres etter 10 min uten aktivitet
   - lyden skrives bare til en midlertidig katalog og slettes etter transkripsjon
 
 Protokoll: modden skriver `<kontroll>/<løpenr>.cmd` med `start`, `stopp` eller
@@ -192,55 +192,62 @@ MIKROFON_FEIL = ("Ingen mikrofontilgang: macOS leverer bare stillhet. Gi appen s
 
 
 class Lytter:
-    def __init__(self, norskriber):
-        self.kjerne = None
+    """Eier modellens livsløp: lastes ved første trykk, frigjøres etter
+    `frigjor_s` sekunder uten aktivitet, lastes på nytt ved neste trykk.
+
+    Uten whisper-server (Homebrew bygger den ikke) brukes kjernens filbane:
+    whisper-cli per opptak, modellen lastes hver gang og holdes aldri."""
+
+    def __init__(self, kjerne, konfig, frigjor_s=600.0, klokke=time.monotonic):
+        self.kjerne = kjerne
+        self.konfig = konfig
+        self.frigjor_s = frigjor_s
+        self.klokke = klokke
         self.resident = None
         self.laster = None
         self.lastefeil = None
         self.opptak = None
         self.ffmpeg = shutil.which("ffmpeg")
-        sys.path.insert(0, str(norskriber))
-        try:
-            import kjerne
-            self.kjerne = kjerne
-        except ImportError as e:
-            self.oppsettfeil = f"Fant ikke NORSKRIBER-kjernen i {norskriber} ({e})."
-            return
-        self.oppsettfeil = self._oppsettsjekk()
+        self.sist_aktiv = klokke()
+        self.oppsett = None
 
-    def _oppsettsjekk(self):
-        """Billige sjekker uten SHA; SHA-en verifiseres når modellen lastes."""
-        if not self.ffmpeg:
-            return "Fant ikke ffmpeg på PATH."
+    def oppsettfeil(self):
+        """Billige sjekker uten SHA (den verifiseres når modellen lastes).
+        Kjøres ved hvert trykk, så en rettet installasjon virker uten omstart."""
         try:
-            o = self.kjerne.standard_oppsett()
+            o = self.kjerne.standard_oppsett(**self.konfig)
+            rapport = self.kjerne.sjekk_oppsett(o, verifiser_sha=False)
         except Exception as e:
-            return f"NORSKRIBER-oppsettet kan ikke leses: {e}"
-        if not o.whisper_server.is_file():
-            return f"Fant ikke whisper.cpp-binæren: {o.whisper_server}"
-        if not o.modell.is_file():
-            return f"Fant ikke modellen: {o.modell}"
-        return None
+            return f"Oppsettet kan ikke leses: {e}"
+        if rapport["ok"]:
+            return None
+        return (f"Oppsettet er ikke komplett (mangler: {', '.join(rapport['mangler'])}). "
+                "Kjør /norsk oppsett for hva som må gjøres.")
 
     def _last(self):
         try:
             emit(type="laster")
-            self.resident = self.kjerne.Resident().start()
+            r = self.kjerne.Resident(self.kjerne.standard_oppsett(**self.konfig))
+            self.resident = r.start()
             emit(type="modell_klar", modell_sha256=self.resident.sha)
         except Exception as e:
             self.lastefeil = str(e)
             emit(type="feil", melding=self.lastefeil)
 
+    def _laster_na(self):
+        return self.laster is not None and self.laster.is_alive()
+
     def start(self):
-        if self.oppsettfeil:
-            emit(type="feil", melding=self.oppsettfeil)
-            return
-        if self.lastefeil:
-            emit(type="feil", melding=self.lastefeil)
-            return
         if self.opptak:
             return
-        if not self.resident and not self.laster:
+        feil = self.oppsettfeil()
+        if feil:
+            emit(type="feil", melding=feil)
+            return
+        self.lastefeil = None
+        self.sist_aktiv = self.klokke()
+        self.oppsett = self.kjerne.standard_oppsett(**self.konfig)
+        if self.oppsett.whisper_server is not None and self.resident is None and not self._laster_na():
             self.laster = threading.Thread(target=self._last, daemon=True)
             self.laster.start()
         try:
@@ -254,12 +261,22 @@ class Lytter:
         if self.opptak:
             self.opptak.stopp()
 
+    def frigjor_ved_inaktivitet(self):
+        if (self.resident is not None and self.opptak is None and not self._laster_na()
+                and self.klokke() - self.sist_aktiv >= self.frigjor_s):
+            self.resident.stopp()
+            self.resident = None
+            emit(type="frigjort", etter_s=self.frigjor_s)
+
     def poll(self):
-        """Kalles i hovedløkka: avslutter et opptak som er ferdig."""
+        """Kalles i hovedløkka: avslutter et opptak som er ferdig, og frigjør
+        modellen når den har ligget ubrukt lenge nok."""
         o = self.opptak
         if not o or not o.ferdig.is_set():
+            self.frigjor_ved_inaktivitet()
             return
         self.opptak = None
+        self.sist_aktiv = self.klokke()
         if o.feil:
             emit(type="feil", melding=MIKROFON_FEIL if o.feil == "nuller" else
                  f"Mikrofonen feilet: {o.feil}")
@@ -268,9 +285,10 @@ class Lytter:
             emit(type="tom", slutt=o.grunn)
             return
         emit(type="behandler", slutt=o.grunn)
+        filbane = self.oppsett is not None and self.oppsett.whisper_server is None
         if self.laster:
             self.laster.join()
-        if not self.resident:
+        if not filbane and self.resident is None:
             emit(type="feil", melding=self.lastefeil or "Modellen ble ikke lastet.")
             return
         with tempfile.TemporaryDirectory(prefix="norsk-tale-") as tmp:
@@ -281,28 +299,44 @@ class Lytter:
                 w.setframerate(RATE)
                 w.writeframes(bytes(o.vakt.tale))
             try:
-                resultat = self.resident.transkriber(wav)
+                resultat = (self.kjerne.transkriber(wav, self.oppsett) if filbane
+                            else self.resident.transkriber(wav))
             except Exception as e:
                 emit(type="feil", melding=f"Transkripsjonen feilet: {e}")
                 return
+        self.sist_aktiv = self.klokke()
         emit(type="tekst", slutt=o.grunn, resultat=resultat)
 
     def avslutt(self):
         self.stopp()
-        if self.resident:
+        if self.resident is not None:
             self.resident.stopp()
+            self.resident = None
+
+
+def last_kjerne():
+    """Kjernen ligger i pluginens egen kjerne/-mappe ved siden av lytter/."""
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "kjerne"))
+    import kjerne
+    return kjerne
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--kontroll", required=True, type=pathlib.Path)
-    ap.add_argument("--norskriber", required=True, type=pathlib.Path)
+    ap.add_argument("--modellvalg", default="")
+    ap.add_argument("--modell", default="")
+    ap.add_argument("--whisper", default="")
+    ap.add_argument("--frigjor-etter", type=float, default=600.0,
+                    help="Sekunder uten aktivitet før modellen frigjøres (standard 600).")
     a = ap.parse_args(argv)
     kontroll = a.kontroll.expanduser()
     kontroll.mkdir(parents=True, exist_ok=True)
-    lytter = Lytter(a.norskriber.expanduser())
+    konfig = {"modellvalg": a.modellvalg or None, "modell": a.modell or None,
+              "whisper": a.whisper or None}
+    lytter = Lytter(last_kjerne(), konfig, frigjor_s=a.frigjor_etter)
     forelder = os.getppid()
-    emit(type="oppe", feil=lytter.oppsettfeil)
+    emit(type="oppe", feil=lytter.oppsettfeil())
     try:
         while True:
             if os.getppid() != forelder:
