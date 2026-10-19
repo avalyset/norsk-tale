@@ -35,6 +35,20 @@ Ved kryss beregnes WER mot fasit i talens målform. Målformfeil blir dermed syn
 som WER-økning, og tapte nektelser telles for seg. Begge rapporteres per celle:
 antall nektelser i referansen, antall tapt, andel tapt og antall lagt til.
 
+## Kontaminering og kreditering
+
+Før resultater rapporteres, gjennomgås `kontaminering.md` for hvert sett. NB Samtale
+markeres som mulig optimistisk, fordi testen ikke er delt på taler. For NST
+rapporteres linje 1–1500 av nor0464 (NB-Whispers testutvalg) for seg.
+
+NST hentes fra Språkbanken (sbr-54, CC0). HF-kortet for `NbAiLab/NST` oppgir
+`apache-2.0`. Det avviket noteres i rapporten.
+
+Rapporten krediterer FLEURS (CC-BY-4.0): «FLEURS: Few-shot Learning Evaluation of
+Universal Representations of Speech», Conneau mfl., 2022, Google,
+https://huggingface.co/datasets/google/fleurs, lisensiert CC-BY-4.0. Bare test-
+splitten for nb_no er brukt, og ingen lyd eller fulltekst publiseres.
+
 ## Kjøring
 
 - **Modeller:** large og medium (begge på Vault, SHA verifisert). small bare hvis
