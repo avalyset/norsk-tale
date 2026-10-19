@@ -10,6 +10,9 @@ identifiers:
     value: 10.5281/zenodo.23473248
     description: "Konsept-DOI, alle versjoner"
   - type: doi
+    value: 10.5281/zenodo.23473432
+    description: "Versjon 0.1.1"
+  - type: doi
     value: 10.5281/zenodo.23473249
     description: "Versjon 0.1.0"
 authors:
