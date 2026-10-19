@@ -1,0 +1,31 @@
+# FROZEN – prereg-v1
+
+Frosset: 2026-10-19, lokal git-tagg prereg-v1 (ingen push).
+Frysecommit: 9a724f8b09ede8a5ee38b36c0dbfccb3ad696fa2
+
+## SHA256
+METHOD.md       4a46cf9bd07914f93bebb450859fcf2c5241719408460863e86b5dcc97a63bad
+manifest.json   91cdec9b74642b846bae995a775bc9d63af2194e37a3cd9157e74d306dc927a4
+reproduser.py   5a38201c73229bf33cb1ca575e2f82f43e83acba4292216f6ac5fc298503abd9
+
+Øvrig kode, id-lister, modeller, whisper.cpp-binær og -biblioteker og dataarkiver er
+låst med SHA256 i manifest.json og verifiseres av `reproduser.py verifiser`.
+
+## Determinismetest (METHOD § 8)
+Backend metal, modell medium, målform nb, prompt pa, to kjøringer, én prosess per ytring.
+Resultat: BYTE-IDENTISK (5/5). Bare SHA256 av utdata føres.
+  10009208613112238545.wav  rå de6f45fc4ce02e5f… = de6f45fc4ce02e5f…  korrigert de6f45fc4ce02e5f… = de6f45fc4ce02e5f…
+  10079345942595448902.wav  rå 1cf97a1e51fe028b… = 1cf97a1e51fe028b…  korrigert 1cf97a1e51fe028b… = 1cf97a1e51fe028b…
+  10127119633288296536.wav  rå ad354e049e76577b… = ad354e049e76577b…  korrigert ad354e049e76577b… = ad354e049e76577b…
+  1017469410462020785.wav  rå f76a3c0e9a7af305… = f76a3c0e9a7af305…  korrigert f76a3c0e9a7af305… = f76a3c0e9a7af305…
+  1018158342225780238.wav  rå d4632bdb381dd42c… = d4632bdb381dd42c…  korrigert d4632bdb381dd42c… = d4632bdb381dd42c…
+
+## Forutsetninger (METHOD § 11)
+1. NST og NB Samtale lastet ned, SHA i PROVENIENS og manifest: oppfylt.
+2. Id-listene generert, committet og regenerert byte-identisk fra data: oppfylt.
+3. Determinismetest på Metal: bestått.
+4. Godkjent av Eirik Botten Nicolaysen 2026-10-19: bestillingen ble gitt som godkjenning
+   («Min bestilling er godkjenningen»), uten egen faktasjekkport før frysen.
+
+## OSF
+Registrering: (føres inn etter innsending)
