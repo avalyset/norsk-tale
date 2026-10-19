@@ -1,0 +1,904 @@
+{
+ "versjon": "prereg-v1",
+ "fase": 1,
+ "avvik": "AVVIK.md nr. 1",
+ "delmatriser": [
+  {
+   "sett": "fleurs",
+   "modeller": [
+    "medium",
+    "large"
+   ],
+   "malformer": [
+    "nb"
+   ],
+   "prompt": [
+    "pa",
+    "av"
+   ]
+  },
+  {
+   "sett": "nb_tale",
+   "modeller": [
+    "large"
+   ],
+   "malformer": [
+    "nb"
+   ],
+   "prompt": [
+    "pa"
+   ]
+  }
+ ],
+ "sett": {
+  "fleurs": {
+   "n_utvalg": 357,
+   "n_analyse": 357,
+   "andel_utelukket": 0.0,
+   "utelukket_ved_kjoring": {
+    "medium/nb/pa": {},
+    "medium/nb/av": {},
+    "large/nb/pa": {},
+    "large/nb/av": {}
+   },
+   "mangler_celler": [],
+   "celler": {
+    "alle": {
+     "medium/nb/pa": {
+      "n": 357,
+      "ra": {
+       "wer": 0.0653,
+       "wer_ki95": [
+        0.0578,
+        0.0735
+       ],
+       "cer": 0.0264,
+       "cer_ki95": [
+        0.022,
+        0.0318
+       ],
+       "nektelser": {
+        "referanse": 77,
+        "tapt": 2,
+        "lagt_til": 0,
+        "andel_tapt": 0.026,
+        "tapt_per_100": 0.56,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0653,
+       "wer_ki95": [
+        0.0578,
+        0.0735
+       ],
+       "cer": 0.0264,
+       "cer_ki95": [
+        0.022,
+        0.0318
+       ],
+       "nektelser": {
+        "referanse": 77,
+        "tapt": 2,
+        "lagt_til": 0,
+        "andel_tapt": 0.026,
+        "tapt_per_100": 0.56,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 2.058,
+       "sum": 752.9
+      }
+     },
+     "medium/nb/av": {
+      "n": 357,
+      "ra": {
+       "wer": 0.0676,
+       "wer_ki95": [
+        0.0596,
+        0.076
+       ],
+       "cer": 0.0283,
+       "cer_ki95": [
+        0.0231,
+        0.0344
+       ],
+       "nektelser": {
+        "referanse": 77,
+        "tapt": 2,
+        "lagt_til": 0,
+        "andel_tapt": 0.026,
+        "tapt_per_100": 0.56,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0676,
+       "wer_ki95": [
+        0.0596,
+        0.076
+       ],
+       "cer": 0.0283,
+       "cer_ki95": [
+        0.0231,
+        0.0344
+       ],
+       "nektelser": {
+        "referanse": 77,
+        "tapt": 2,
+        "lagt_til": 0,
+        "andel_tapt": 0.026,
+        "tapt_per_100": 0.56,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 1.988,
+       "sum": 728.4
+      }
+     },
+     "large/nb/pa": {
+      "n": 357,
+      "ra": {
+       "wer": 0.0534,
+       "wer_ki95": [
+        0.0472,
+        0.0598
+       ],
+       "cer": 0.0193,
+       "cer_ki95": [
+        0.0165,
+        0.0223
+       ],
+       "nektelser": {
+        "referanse": 77,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0534,
+       "wer_ki95": [
+        0.0472,
+        0.0598
+       ],
+       "cer": 0.0193,
+       "cer_ki95": [
+        0.0165,
+        0.0223
+       ],
+       "nektelser": {
+        "referanse": 77,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 4.759,
+       "sum": 1863.5
+      }
+     },
+     "large/nb/av": {
+      "n": 357,
+      "ra": {
+       "wer": 0.0526,
+       "wer_ki95": [
+        0.0464,
+        0.0592
+       ],
+       "cer": 0.0196,
+       "cer_ki95": [
+        0.0166,
+        0.0229
+       ],
+       "nektelser": {
+        "referanse": 77,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0526,
+       "wer_ki95": [
+        0.0464,
+        0.0592
+       ],
+       "cer": 0.0196,
+       "cer_ki95": [
+        0.0166,
+        0.0229
+       ],
+       "nektelser": {
+        "referanse": 77,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 4.666,
+       "sum": 1813.3
+      }
+     }
+    }
+   }
+  },
+  "nb_tale": {
+   "n_utvalg": 480,
+   "n_analyse": 480,
+   "andel_utelukket": 0.0,
+   "utelukket_ved_kjoring": {
+    "large/nb/pa": {}
+   },
+   "mangler_celler": [],
+   "celler": {
+    "alle": {
+     "large/nb/pa": {
+      "n": 480,
+      "ra": {
+       "wer": 0.0937,
+       "wer_ki95": [
+        0.0814,
+        0.1074
+       ],
+       "cer": 0.0406,
+       "cer_ki95": [
+        0.0338,
+        0.0484
+       ],
+       "nektelser": {
+        "referanse": 29,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0937,
+       "wer_ki95": [
+        0.0814,
+        0.1074
+       ],
+       "cer": 0.0406,
+       "cer_ki95": [
+        0.0338,
+        0.0484
+       ],
+       "nektelser": {
+        "referanse": 29,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 4.094,
+       "sum": 2154.6
+      }
+     }
+    },
+    "gruppe_g01": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.09,
+       "wer_ki95": [
+        0.0548,
+        0.1274
+       ],
+       "cer": 0.034,
+       "cer_ki95": [
+        0.0196,
+        0.0494
+       ],
+       "nektelser": {
+        "referanse": 1,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.09,
+       "wer_ki95": [
+        0.0548,
+        0.1274
+       ],
+       "cer": 0.034,
+       "cer_ki95": [
+        0.0196,
+        0.0494
+       ],
+       "nektelser": {
+        "referanse": 1,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 4.385,
+       "sum": 197.3
+      }
+     }
+    },
+    "gruppe_g02": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.0836,
+       "wer_ki95": [
+        0.0449,
+        0.1257
+       ],
+       "cer": 0.0366,
+       "cer_ki95": [
+        0.0194,
+        0.056
+       ],
+       "nektelser": {
+        "referanse": 2,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0836,
+       "wer_ki95": [
+        0.0449,
+        0.1257
+       ],
+       "cer": 0.0366,
+       "cer_ki95": [
+        0.0194,
+        0.056
+       ],
+       "nektelser": {
+        "referanse": 2,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 4.53,
+       "sum": 197.0
+      }
+     }
+    },
+    "gruppe_g03": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.1088,
+       "wer_ki95": [
+        0.0666,
+        0.156
+       ],
+       "cer": 0.0434,
+       "cer_ki95": [
+        0.0232,
+        0.0684
+       ],
+       "nektelser": {
+        "referanse": 2,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.1088,
+       "wer_ki95": [
+        0.0666,
+        0.156
+       ],
+       "cer": 0.0434,
+       "cer_ki95": [
+        0.0232,
+        0.0684
+       ],
+       "nektelser": {
+        "referanse": 2,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 4.531,
+       "sum": 197.5
+      }
+     }
+    },
+    "gruppe_g04": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.086,
+       "wer_ki95": [
+        0.052,
+        0.1262
+       ],
+       "cer": 0.0308,
+       "cer_ki95": [
+        0.0177,
+        0.0469
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.086,
+       "wer_ki95": [
+        0.052,
+        0.1262
+       ],
+       "cer": 0.0308,
+       "cer_ki95": [
+        0.0177,
+        0.0469
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 6.079,
+       "sum": 223.2
+      }
+     }
+    },
+    "gruppe_g05": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.1181,
+       "wer_ki95": [
+        0.0687,
+        0.1749
+       ],
+       "cer": 0.0494,
+       "cer_ki95": [
+        0.0303,
+        0.0713
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.1181,
+       "wer_ki95": [
+        0.0687,
+        0.1749
+       ],
+       "cer": 0.0494,
+       "cer_ki95": [
+        0.0303,
+        0.0713
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 4.765,
+       "sum": 204.8
+      }
+     }
+    },
+    "gruppe_g06": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.0924,
+       "wer_ki95": [
+        0.0589,
+        0.129
+       ],
+       "cer": 0.0361,
+       "cer_ki95": [
+        0.0198,
+        0.0536
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0924,
+       "wer_ki95": [
+        0.0589,
+        0.129
+       ],
+       "cer": 0.0361,
+       "cer_ki95": [
+        0.0198,
+        0.0536
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 6.336,
+       "sum": 232.0
+      }
+     }
+    },
+    "gruppe_g07": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.0754,
+       "wer_ki95": [
+        0.0391,
+        0.1173
+       ],
+       "cer": 0.0238,
+       "cer_ki95": [
+        0.0121,
+        0.0365
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0754,
+       "wer_ki95": [
+        0.0391,
+        0.1173
+       ],
+       "cer": 0.0238,
+       "cer_ki95": [
+        0.0121,
+        0.0365
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 3.632,
+       "sum": 146.2
+      }
+     }
+    },
+    "gruppe_g08": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.0985,
+       "wer_ki95": [
+        0.0419,
+        0.172
+       ],
+       "cer": 0.0798,
+       "cer_ki95": [
+        0.0318,
+        0.1456
+       ],
+       "nektelser": {
+        "referanse": 1,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0985,
+       "wer_ki95": [
+        0.0419,
+        0.172
+       ],
+       "cer": 0.0798,
+       "cer_ki95": [
+        0.0318,
+        0.1456
+       ],
+       "nektelser": {
+        "referanse": 1,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 3.612,
+       "sum": 146.5
+      }
+     }
+    },
+    "gruppe_g09": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.0847,
+       "wer_ki95": [
+        0.0478,
+        0.1245
+       ],
+       "cer": 0.0361,
+       "cer_ki95": [
+        0.0202,
+        0.0526
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0847,
+       "wer_ki95": [
+        0.0478,
+        0.1245
+       ],
+       "cer": 0.0361,
+       "cer_ki95": [
+        0.0202,
+        0.0526
+       ],
+       "nektelser": {
+        "referanse": 3,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 3.581,
+       "sum": 145.7
+      }
+     }
+    },
+    "gruppe_g10": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.1016,
+       "wer_ki95": [
+        0.0656,
+        0.1397
+       ],
+       "cer": 0.0409,
+       "cer_ki95": [
+        0.0231,
+        0.0616
+       ],
+       "nektelser": {
+        "referanse": 0,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": null,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.1016,
+       "wer_ki95": [
+        0.0656,
+        0.1397
+       ],
+       "cer": 0.0409,
+       "cer_ki95": [
+        0.0231,
+        0.0616
+       ],
+       "nektelser": {
+        "referanse": 0,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": null,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 3.932,
+       "sum": 165.0
+      }
+     }
+    },
+    "gruppe_g11": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.0969,
+       "wer_ki95": [
+        0.0493,
+        0.1515
+       ],
+       "cer": 0.0437,
+       "cer_ki95": [
+        0.0153,
+        0.0804
+       ],
+       "nektelser": {
+        "referanse": 6,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0969,
+       "wer_ki95": [
+        0.0493,
+        0.1515
+       ],
+       "cer": 0.0437,
+       "cer_ki95": [
+        0.0153,
+        0.0804
+       ],
+       "nektelser": {
+        "referanse": 6,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 3.579,
+       "sum": 144.8
+      }
+     }
+    },
+    "gruppe_g12": {
+     "large/nb/pa": {
+      "n": 40,
+      "ra": {
+       "wer": 0.0879,
+       "wer_ki95": [
+        0.0538,
+        0.1225
+       ],
+       "cer": 0.0305,
+       "cer_ki95": [
+        0.0166,
+        0.0457
+       ],
+       "nektelser": {
+        "referanse": 2,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "markorer": 0,
+      "korrigert": {
+       "wer": 0.0879,
+       "wer_ki95": [
+        0.0538,
+        0.1225
+       ],
+       "cer": 0.0305,
+       "cer_ki95": [
+        0.0166,
+        0.0457
+       ],
+       "nektelser": {
+        "referanse": 2,
+        "tapt": 0,
+        "lagt_til": 0,
+        "andel_tapt": 0.0,
+        "tapt_per_100": 0.0,
+        "lagt_til_per_100": 0.0
+       }
+      },
+      "vegg_s": {
+       "median": 3.841,
+       "sum": 154.6
+      }
+     }
+    }
+   }
+  }
+ }
+}
