@@ -337,8 +337,7 @@ dikteringen ved markøren, for Angre og for selvtestens sjekk. Den sender aldri 
 prompten og sender ingenting ut av maskinen. Den eneste nettverkstrafikken er
 loopback (`127.0.0.1`): til `whisper-server` og mellom nettleseren og riggen. Teksten
 går til Claude først når du selv sender prompten. Pluginen leser ingen
-legitimasjon. `huggingface.co` og `~/.claude.json` nevnes i denne README-en bare
-som dokumentasjon. Pluginen kontakter ikke Hugging Face og leser ikke fila.
+legitimasjon (se [Personvern](#personvern)).
 
 **Hookene:**
 
@@ -353,7 +352,30 @@ som dokumentasjon. Pluginen kontakter ikke Hugging Face og leser ikke fila.
 Se [PRIVACY.md](PRIVACY.md). Kort sagt samles ingen data inn, lyden forlater ikke
 maskinen, og pluginen gjør ingen nettverkskall under transkripsjon. De eneste
 forbindelsene er loopback (`127.0.0.1`): til en lokal `whisper-server` når den
-finnes, og mellom nettleseren og kalibreringsriggen når du bruker `/norsk kalibrer`. Teksten du sender til Claude, går dit som all annen tekst du sender.
+finnes, og mellom nettleseren og kalibreringsriggen når du bruker `/norsk kalibrer`.
+Teksten du sender til Claude, går dit som all annen tekst du sender.
+
+**Ingen legitimasjon leses.** Katalogens automatiske sjekk merker pluginen med
+«Uses a credential from the user's machine» (2 funn). Begge funnene gjelder
+dokumentasjonen, ikke koden:
+
+- README nevner `~/.claude.json` i avsnittet om autooppdatering i testøkter, og
+  `huggingface.co` som kilde for modellen og datasettet.
+- CHANGELOG inneholder lenker.
+
+Ingen kode i pluginen leser `~/.claude.json`, tokens, API-nøkler eller andre
+hemmeligheter, og pluginen kontakter ikke Hugging Face. Dette er det pluginen
+faktisk leser av miljøet:
+
+- Modden leser `HOME`, `TMPDIR` og `NORSK_TALE_OPPTAK` for å finne opptaksmappa og
+  kontrollkatalogen.
+- Kjernen og lytteren leser `NORSK_TALE_MODELLVALG`, `NORSK_TALE_MALFORM`,
+  `NORSK_TALE_MODELL`, `NORSK_TALE_WHISPER`, `NORSK_TALE_WHISPER_ARGS`,
+  `NORSK_TALE_OPPTAK`, `NORSK_TALE_MIKROFON` og `NORSK_TALE_TESTKILDE`, pluss
+  hjemmemappa for standardstiene.
+
+Det eneste «tokenet» er det tilfeldige tokenet kalibreringsriggen lager selv for
+adressen sin på `127.0.0.1`.
 
 ## Utvikling
 
