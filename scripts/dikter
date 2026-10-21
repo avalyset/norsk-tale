@@ -77,6 +77,9 @@ def ta_opp(ffmpeg, maks_s=MAKS_S, ingen_tale_s=INGEN_TALE_S, lytter=None):
                 proc.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 proc.kill()
+                proc.wait()
+        proc.stdout.close()
+        proc.stderr.close()
     return bytes(vakt.tale), grunn
 
 
