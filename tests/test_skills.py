@@ -67,13 +67,21 @@ def test_skriptet_er_kjorbart_og_har_fast_tolker_i_isolert_modus():
     assert sti.read_text(encoding="utf-8").startswith("#!/usr/bin/env -S python3 -I\n")
 
 
-def test_ingen_mod_ingen_mcp_server_ingen_kroker():
+def test_ingen_mod_ingen_mcp_server_og_bare_den_ene_vanlige_kroken():
     sporet = subprocess.run(["git", "-C", str(ROT), "ls-files"], capture_output=True, text=True).stdout.split("\n")
     if sporet != [""]:
-        forbudt = [f for f in sporet if f.startswith(("hooks/", "mcp/", "types/")) or f in (".mcp.json", "tsconfig.json")]
+        forbudt = [f for f in sporet if f.startswith(("mcp/", "types/")) or f in (".mcp.json", "tsconfig.json")
+                   or (f.startswith("hooks/") and f != "hooks/hooks.json")]
         assert forbudt == [], forbudt
     for nokkel in ("hooks", "mcpServers", "types", "commands", "agents"):
         assert nokkel not in MANIFEST, nokkel
+    kroker = json.loads((ROT / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+    assert list(kroker) == ["hooks"] and list(kroker["hooks"]) == ["PreToolUse"], kroker
+    (oppforing,) = kroker["hooks"]["PreToolUse"]
+    assert oppforing["matcher"] == "Bash"
+    (kommando,) = oppforing["hooks"]
+    assert kommando == {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/avvis-opptak"}
+    assert os.access(ROT / "scripts" / "avvis-opptak", os.X_OK)
     tekst = " ".join(p.read_text(encoding="utf-8", errors="ignore")
                      for p in [ROT / "scripts" / "dikter", ROT / "skills" / "dikter" / "SKILL.md"])
     assert "mcp__" not in tekst and "$.mcp" not in tekst

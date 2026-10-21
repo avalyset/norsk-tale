@@ -1,0 +1,90 @@
+#!/usr/bin/env -S python3 -I
+"""norsk-tale — PreToolUse-hook på Bash: nekter modellen å starte mikrofonen.
+
+Brukerens egen start, /norsk-tale:dikter, kjører skriptet som en injisert `!`-kommando i
+skillen. Den passerer ikke denne kroken (målt i Claude Code 2.1.303: kroken ble ikke utløst
+for injeksjonen, bare for modellens egne Bash-kall). Kroken ser derfor bare kall modellen
+gjør, og nekter dem som kjører scripts/dikter uten --fil, altså med mikrofonen. Med --fil
+(filmodus, brukt av skillen transkriber) og --help slippes kallet gjennom.
+
+Dette er en fartshump, ikke en garanti: modellen kan i prinsippet ta opp lyd på andre måter
+(for eksempel ffmpeg direkte), og et kall du selv godkjenner, godkjenner du.
+
+Les stdin (hook-JSON), skriv deny-beslutning som JSON på stdout, avslutt med kode 0.
+Ingenting loggføres, og ingenting skrives til disk.
+"""
+import json
+import os
+import re
+import shlex
+import sys
+
+SKALL = {"bash", "sh", "zsh", "dash", "ksh"}
+TOLKER = {"python", "python3", "python3.10", "python3.11", "python3.12", "python3.13", "python3.14"}
+OMSLAG = {"env", "time", "nohup", "command", "exec", "sudo", "nice", "stdbuf", "caffeinate", "builtin", "xargs"}
+SKILLE = re.compile(r"&&|\|\||;|\||&|\n|\$\(|`|\(|\)")
+ADVARSEL = ("norsk-tale: Claude kan ikke starte mikrofonen. Brukeren starter dikteringen selv "
+            "med /norsk-tale:dikter. Filer kan transkriberes med --fil.")
+
+
+def er_dikter(token):
+    return os.path.basename(token.strip("'\"")) == "dikter"
+
+
+def starter_mikrofonen(kommando, dybde=0):
+    """True hvis kommandoen kjører skriptet dikter uten --fil (og uten --help)."""
+    if dybde > 4:
+        return False
+    for bit in SKILLE.split(kommando):
+        try:
+            tokens = shlex.split(bit)
+        except ValueError:
+            tokens = bit.split()
+        while tokens and (re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[0]) or os.path.basename(tokens[0]) in OMSLAG):
+            tokens = tokens[1:]
+        if not tokens:
+            continue
+        navn = os.path.basename(tokens[0])
+        rest = tokens[1:]
+        if navn in SKALL:                      # bash -c "…/dikter"
+            for i, t in enumerate(rest):
+                if t.startswith("-") and "c" in t.lstrip("-") and i + 1 < len(rest):
+                    if starter_mikrofonen(rest[i + 1], dybde + 1):
+                        return True
+            if rest and not rest[0].startswith("-") and er_dikter(rest[0]):   # bash scripts/dikter
+                args = rest[1:]
+            else:
+                continue
+        elif navn in TOLKER:                   # python3 scripts/dikter
+            if rest and er_dikter(rest[0]):
+                args = rest[1:]
+            else:
+                continue
+        elif er_dikter(tokens[0]):             # scripts/dikter, ./dikter, absolutt sti
+            args = rest
+        else:
+            continue
+        if not any(a == "--fil" or a.startswith("--fil=") for a in args) \
+                and not any(a in ("-h", "--help") for a in args):
+            return True
+    return False
+
+
+def hoved():
+    try:
+        inn = json.load(sys.stdin)
+    except json.JSONDecodeError:
+        return 0
+    if inn.get("tool_name") != "Bash":
+        return 0
+    kommando = str((inn.get("tool_input") or {}).get("command") or "")
+    if starter_mikrofonen(kommando):
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                                                 "permissionDecision": "deny",
+                                                 "permissionDecisionReason": ADVARSEL}},
+                         ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(hoved())
