@@ -3,7 +3,7 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
-## [0.2.3] – 2026-10-19
+## [0.2.3] – 2026-10-21
 
 Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring for brukeren:
 selvtestrapporten får samme innhold og havner samme sted.

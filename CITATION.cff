@@ -3,7 +3,7 @@ message: "Hvis du bruker norsk-tale, siter programvaren slik."
 type: software
 title: "norsk-tale: lokal norsk diktering i Claude Code med NB-Whisper og whisper.cpp"
 version: 0.2.3
-date-released: 2026-10-19
+date-released: 2026-10-21
 doi: 10.5281/zenodo.23473248
 identifiers:
   - type: doi
