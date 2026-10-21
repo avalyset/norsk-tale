@@ -3,6 +3,39 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
+## [Ikke utgitt] – grenen `feat/uten-mod`
+
+Samme diktering uten mod, uten MCP-server og uten kroker (docs/decisions/NTA-0008).
+
+### Endret
+
+- Dikteringen er skillen `dikter` (`/norsk-tale:dikter`) og skriptet `scripts/dikter`: ffmpeg
+  tar opp til stillhet (høyst 90 s, gir opp etter 10 s uten tale), én ny `whisper-cli`
+  transkriberer via kjernen med SHA256-sjekk av modellen, og bare transkripsjonen skrives
+  til stdout. Skillen har `disable-model-invocation: true`, og bare skriptet er
+  forhåndsgodkjent (`allowed-tools`).
+- Innstillingene leses som `${user_config.*}` i skillens kommando, i enkle anførselstegn.
+  Uløste plassholdere (innstillingene er ikke lagret) teller som ikke satt, så pluginen
+  virker uten oppsett. Kjørt i Claude Code 2.1.303: en lagret `modellvalg` nådde skriptet.
+- Skillen `transkriber` bruker `scripts/dikter --fil` i stedet for MCP-verktøyet.
+- README er skrevet om på engelsk. Den gamle README-en er arkivert i
+  `docs/README-0.2-mod-og-mcp.md`. PRIVACY og NOTICE er oppdatert.
+
+### Fjernet
+
+- Modden (`hooks/`), MCP-serveren (`mcp/`, `.mcp.json`), typekontrakten (`types/`,
+  `tsconfig.json`) og testene som hørte til dem. Dermed er også installasjonen av
+  MCP-SDK-en fra PyPI borte: pluginen bruker ikke nett.
+- Knappen, hurtigtasten, Angre og `/norsk selvtest`, som trengte modden.
+- Innstillingen `opptak` (bare kalibreringsriggen brukte den, og den startes nå for hånd).
+
+### Lagt til
+
+- `tests/test_dikter.py` (skriptet, opptaksbanen med testkilde, ende-til-ende med modell) og
+  `tests/test_skills.py` (skillene, manifestet og «ingen mod»).
+
+Kjernen, preregistreringen og kalibreringen er urørt: `tests/test_preregistrering.py` er grønn.
+
 ## [0.2.4] – 2026-10-21
 
 Svar på katalogens funn for 0.2.3. Ingen funksjonsendring: koden i modden og serveren er
