@@ -80,3 +80,11 @@ def test_readme_har_en_underseksjon_per_krok_med_riktig_linje():
 def test_readme_nevner_ikke_bildefilen():
     assert not re.search(r"\.png\b|assets/", README)
 
+
+def test_hver_doi_i_citation_staar_i_readmes_versjonsliste():
+    citation = (ROT / "CITATION.cff").read_text(encoding="utf-8")
+    dois = set(re.findall(r"10\.5281/zenodo\.\d+", citation))
+    assert len(dois) >= 7, dois
+    mangler = sorted(d for d in dois if d not in README)
+    assert mangler == [], f"DOI i CITATION.cff som mangler i README: {mangler}"
+

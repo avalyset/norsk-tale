@@ -16,16 +16,14 @@ uendret.
   og at det går til pluginens egen lokale MCP-server over stdio.
 - README nevner ikke lenger ikonfilen. Katalogen leste henvisningen som et funn
   (`UNREAD_ASSET_REFERENCED`). Ikonet står fortsatt i `plugin.json`.
-- `plugin.json`: `keywords` er fjernet, og beskrivelsene av innstillingene `whisper` og
-  `opptak` nevner ikke miljøvariabelen eller PATH. Dette er en hypotese for
-  `MCP_FORWARDS_CREDENTIAL_ENV`: ingen kode leser innloggingsopplysninger, og det
-  eneste navnet i manifestet som ligner et nøkkelord er `keywords`. Forsvinner ikke
-  funnet, kan feltet settes inn igjen.
+- Versjonslista i README og `CITATION.cff` har fått versjons-DOI-en for 0.2.3
+  (10.5281/zenodo.23526913).
 
 ### Lagt til
 
 - `tests/test_katalogregler.py`: README har en underseksjon for hver krok i
   `hooks/register.tsx`, med riktig hendelse og linjenummer, og nevner ikke bildefilen.
+  Hver DOI i `CITATION.cff` står også i README-ens versjonsliste.
 
 ## [0.2.3] – 2026-10-21
 
