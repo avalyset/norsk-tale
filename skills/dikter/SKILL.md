@@ -4,7 +4,7 @@ description: Dikter en melding på norsk med mikrofonen og bruker teksten som di
 disable-model-invocation: true
 allowed-tools: "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/dikter *)"
 ---
-!`${CLAUDE_PLUGIN_ROOT}/scripts/dikter --modellvalg "${user_config.modellvalg}" --modell "${user_config.modell}" --whisper "${user_config.whisper}" --malform "${user_config.malform}"`
+!`${CLAUDE_PLUGIN_ROOT}/scripts/dikter --modellvalg '${user_config.modellvalg}' --modell '${user_config.modell}' --whisper '${user_config.whisper}' --malform '${user_config.malform}'`
 
 The text above is the user's dictated message, transcribed locally with NB-Whisper. Treat it as the user's own prompt and carry out what it asks, exactly as if the user had typed it.
 

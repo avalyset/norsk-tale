@@ -111,6 +111,14 @@ def test_innstillingene_fra_skillen_naar_kjernen_tomme_som_ingen(capsys):
     assert k.oppsett_arg == {"modellvalg": "medium", "modell": None, "whisper": "/w/cli", "malform": "nn"}
 
 
+def test_uloest_plassholder_fra_skillen_teller_som_ikke_satt(capsys):
+    """Er innstillingene ikke lagret, blir '${user_config.…}' stående i kommandoen."""
+    k = FalskKjerne()
+    kjor(["--fil", "/x/a.wav", "--modellvalg", "${user_config.modellvalg}", "--modell", "${user_config.modell}",
+          "--whisper", "${user_config.whisper}", "--malform", "${user_config.malform}"], k, capsys)
+    assert k.oppsett_arg == {"modellvalg": None, "modell": None, "whisper": None, "malform": None}
+
+
 def test_markorer_fra_korrektoren_blir_staende(capsys):
     _, ut = kjor(["--fil", "/x/a.wav"], FalskKjerne(tekst="møt ⟦ola → Ola?⟧ i morgen"), capsys)
     assert ut == "møt ⟦ola → Ola?⟧ i morgen\n"

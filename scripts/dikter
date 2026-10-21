@@ -91,10 +91,17 @@ def skriv_wav(pcm, sti, rate=16000):
         w.writeframes(pcm)
 
 
+def ren_verdi(verdi):
+    """Skillen sender innstillingene som '${user_config.NAVN}'. Er innstillingen ikke lagret,
+    blir plassholderen stående urørt: den teller da som ikke satt (kjernens miljø og standard)."""
+    verdi = (verdi or "").strip()
+    return None if not verdi or verdi.startswith("${user_config.") else verdi
+
+
 def les_argumenter(argv):
     ap = argparse.ArgumentParser(description="Dikter én melding på norsk (NB-Whisper, lokalt).")
     for navn in ("modellvalg", "modell", "whisper", "malform"):
-        ap.add_argument(f"--{navn}", default="", help="tom: miljø, så standard (som i kjernen)")
+        ap.add_argument(f"--{navn}", default="", help="tom eller uløst «${user_config.…}»: miljø, så standard (som i kjernen)")
     ap.add_argument("--fil", help="testmodus: transkriber denne lydfila i stedet for å bruke mikrofonen")
     ap.add_argument("--maks-s", type=float, default=MAKS_S)
     ap.add_argument("--ingen-tale-s", type=float, default=INGEN_TALE_S)
@@ -105,8 +112,8 @@ def hoved(argv=None, kjerne=None, lytter=None):
     a = les_argumenter(sys.argv[1:] if argv is None else argv)
     kjerne = kjerne or __import__("kjerne")
     try:
-        oppsett = kjerne.standard_oppsett(modellvalg=a.modellvalg or None, modell=a.modell or None,
-                                          whisper=a.whisper or None, malform=a.malform or None)
+        oppsett = kjerne.standard_oppsett(modellvalg=ren_verdi(a.modellvalg), modell=ren_verdi(a.modell),
+                                          whisper=ren_verdi(a.whisper), malform=ren_verdi(a.malform))
         rapport = kjerne.sjekk_oppsett(oppsett, verifiser_sha=False)
         if not rapport["ok"]:
             raise Avbrutt(rapport["melding"])

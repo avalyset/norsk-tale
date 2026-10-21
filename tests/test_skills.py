@@ -36,7 +36,7 @@ def test_dikter_kjorer_ett_fast_kommandotekst_med_innstillingene_fra_manifestet(
     assert k.startswith("${CLAUDE_PLUGIN_ROOT}/scripts/dikter ")
     assert not re.search(r"[;&|<>]|\$\(|`|\n", k.replace("${", "").replace("}", "")), k
     for felt in ("modellvalg", "modell", "whisper", "malform"):
-        assert f'--{felt} "${{user_config.{felt}}}"' in k, felt
+        assert f"--{felt} '${{user_config.{felt}}}'" in k, felt     # enkle anførselstegn: uløst plassholder er bare tekst
     assert "$ARGUMENTS" not in DIKTER, "ingen brukertekst skal inn i skallkommandoen"
 
 

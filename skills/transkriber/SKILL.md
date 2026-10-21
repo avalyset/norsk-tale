@@ -18,7 +18,7 @@ samtalen. Si det til brukeren hvis opptaket er sensitivt.
 2. Kjør nøyaktig denne kommandoen med Bash-verktøyet, med stien i anførselstegn:
 
    ```
-   ${CLAUDE_PLUGIN_ROOT}/scripts/dikter --fil "<absolutt sti>" --modellvalg "${user_config.modellvalg}" --modell "${user_config.modell}" --whisper "${user_config.whisper}" --malform "${user_config.malform}"
+   ${CLAUDE_PLUGIN_ROOT}/scripts/dikter --fil "<absolutt sti>" --modellvalg '${user_config.modellvalg}' --modell '${user_config.modell}' --whisper '${user_config.whisper}' --malform '${user_config.malform}'
    ```
 
    Svaret er transkripsjonen (etter fasittabellen) på én linje. Hvert kall laster
