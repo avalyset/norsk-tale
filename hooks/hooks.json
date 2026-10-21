@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/avvis-opptak"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/scripts/avvis-opptak"
           }
         ]
       }

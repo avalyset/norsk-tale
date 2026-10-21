@@ -80,7 +80,7 @@ def test_ingen_mod_ingen_mcp_server_og_bare_den_ene_vanlige_kroken():
     (oppforing,) = kroker["hooks"]["PreToolUse"]
     assert oppforing["matcher"] == "Bash"
     (kommando,) = oppforing["hooks"]
-    assert kommando == {"type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/scripts/avvis-opptak"}
+    assert kommando == {"type": "command", "command": '"${CLAUDE_PLUGIN_ROOT}"/scripts/avvis-opptak'}
     assert os.access(ROT / "scripts" / "avvis-opptak", os.X_OK)
     tekst = " ".join(p.read_text(encoding="utf-8", errors="ignore")
                      for p in [ROT / "scripts" / "dikter", ROT / "skills" / "dikter" / "SKILL.md"])
