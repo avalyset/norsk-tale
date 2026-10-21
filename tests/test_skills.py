@@ -1,5 +1,5 @@
 """Skillene og manifestet: dikteringen kan bare startes av brukeren, ingenting kjører ved
-siden av skriptet, og pluginen har ingen mod, ingen MCP-server og ingen kroker."""
+siden av skriptet, og pluginen har ingen mod og ingen MCP-server, bare én vanlig hook."""
 import json
 import os
 import pathlib

@@ -7,7 +7,8 @@ Norway, run with [whisper.cpp](https://github.com/ggml-org/whisper.cpp) on your 
 The audio never leaves the machine.
 
 > **Status: development branch `feat/uten-mod`, not released.** This branch replaces the
-> v0.2.x architecture (a mod, an MCP server and hooks) with a skill and one script. The old
+> v0.2.x architecture (a mod, an MCP server and hooks) with a skill, one script and one plain
+> hook. The old
 > README is kept in [docs/README-0.2-mod-og-mcp.md](docs/README-0.2-mod-og-mcp.md) (in Norwegian).
 
 **Claude cannot start the microphone. Only you can, by typing the command yourself.**
@@ -28,7 +29,8 @@ you type /norsk-tale:dikter
        └─ the text replaces the !`…` line, and Claude treats it as your prompt
 ```
 
-There is no mod, no hook, no MCP server and no background process. The microphone is
+There is no mod, no MCP server and no background process. The only hook is a plain
+`PreToolUse` hook that stops the model from running the script (see below). The microphone is
 open only while `scripts/dikter` runs, and the recording is written to a temporary
 directory that is deleted when the script returns.
 
@@ -38,20 +40,36 @@ report that line instead of treating it as a prompt.
 
 ### Why Claude cannot start the microphone
 
+Three layers, measured in Claude Code 2.1.303 on 2026-10-21 with a logged-in session:
+
 - `skills/dikter/SKILL.md` has `disable-model-invocation: true`: Claude cannot invoke the
   skill on its own. Only your own `/norsk-tale:dikter` runs it.
 - The skill's `allowed-tools` is exactly `Bash(${CLAUDE_PLUGIN_ROOT}/scripts/dikter *)`:
-  during the turn you start, only that script is pre-approved.
-- The second skill, `transkriber` (Claude may use it on an audio file you point to), is
-  limited to `Bash(${CLAUDE_PLUGIN_ROOT}/scripts/dikter --fil *)`. `--fil` skips the
-  microphone and only transcribes the file.
+  during the turn you start, only that script is pre-approved. The second skill,
+  `transkriber` (Claude may use it on an audio file you point to), is limited to
+  `Bash(${CLAUDE_PLUGIN_ROOT}/scripts/dikter --fil *)`; `--fil` skips the microphone.
+- `hooks/hooks.json` has one plain `PreToolUse` hook on `Bash`, `scripts/avvis-opptak`. It
+  denies a Bash call from the model that runs `scripts/dikter` without `--fil` (also through
+  `bash -c`, `python3`, `env`, pipes and so on). `--fil`, `--help` and commands that only read
+  or mention the script pass.
 
-This is a weaker guard than the hooks of v0.2.x, which denied model calls outright. It
-rests on Claude Code's permission system: if you allow `scripts/dikter` yourself, or run
-in a mode that approves Bash calls on its own, Claude could run it. In the auto permission
-mode the documentation says the injected command is not run while the skill renders;
-Claude is instead told to run it first, through auto mode's usual checks (that mode is not
-tested here).
+The first two layers alone were not enough. What happened when I asked Claude, in plain
+conversation, to "record audio from the microphone with the norsk-tale script":
+
+| Mode | Without the hook | With the hook |
+|---|---|---|
+| Default (manual) | Claude could only see the `transkriber` skill. Using it asked for permission; running the script through Bash said "This command requires approval". I denied both, and nothing was recorded. | The hook denied the Bash call before any prompt (`PreToolUse:Bash hook error: norsk-tale: Claude kan ikke starte mikrofonen …`). Nothing was recorded. |
+| Auto | **Claude ran the script through Bash with no prompt**, and the microphone was open for 10 s ("Allowed by auto mode classifier"). | The hook denied the call. Claude told me to type `/norsk-tale:dikter` myself. |
+
+Your own `/norsk-tale:dikter` works in both modes, with and without the hook. In auto mode
+the injected command was run by Claude Code itself: the skill's text arrived with the
+transcription already in it, and the model made no tool call first. The hook is not
+triggered by that injected command (it only saw the model's own Bash calls), so it cannot
+get in the way of your start. `transkriber` with `--fil` also works with the hook.
+
+This is a speed bump, not a guarantee. The hook reads the text of the Bash command. The
+model could in principle record sound in other ways (ffmpeg directly, for example), and a
+call you approve yourself, or a mode that approves Bash calls for you, is a call you made.
 
 ## Requirements
 
@@ -136,6 +154,10 @@ the marker and asks you which form is right.
   87 s of speech took 16.8 s to load, verify and transcribe, so a full 90 s dictation
   fits. A slower machine, a CPU-only build or a larger model may not, and a command that
   runs out of time is killed. Use `medium` or `small` for long dictations there.
+- **Claude may open `skills/dikter/SKILL.md` after a dictation.** In two sessions the model read
+  the file on its own, which asks for permission when the plugin is outside the working
+  directory (in auto mode the question offers to change a permission setting; choose a
+  "ask again next time" answer). It does not affect the dictation.
 - **No editing before sending.** The text becomes your prompt immediately. There is no
   undo; say so in the next message if the transcription was wrong.
 - **The model is loaded for every dictation** (a few seconds), because there is no

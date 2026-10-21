@@ -1,7 +1,7 @@
 # Personvern
 
 Gjelder grenen `feat/uten-mod` (ikke utgitt). Pluginen er her en skill og ett skript,
-uten mod, uten MCP-server og uten kroker.
+uten mod og uten MCP-server, med én vanlig hook som nekter modellen å starte mikrofonen.
 
 ## Kort
 
@@ -16,8 +16,10 @@ uten mod, uten MCP-server og uten kroker.
 
 - Mikrofonen åpnes når du selv skriver `/norsk-tale:dikter`, og lukkes når opptaket er
   ferdig: 1,5 s etter at du slutter å snakke, etter 90 s, eller etter 10 s uten tale.
-- Claude kan ikke starte mikrofonen: skillen har `disable-model-invocation: true`, og
-  bare skriptet `scripts/dikter` er forhåndsgodkjent mens den kjører.
+- Claude kan ikke starte mikrofonen: skillen har `disable-model-invocation: true`, bare
+  skriptet `scripts/dikter` er forhåndsgodkjent mens den kjører, og en `PreToolUse`-hook
+  (`scripts/avvis-opptak`) nekter modellens Bash-kall som kjører skriptet uten `--fil`.
+  Hooken leser bare kommandoteksten, lagrer ingenting og sender ingenting.
 - Opptaket skrives til en midlertidig katalog og slettes når skriptet er ferdig. Blir
   prosessen drept midt i en transkripsjon, kan den midlertidige katalogen bli liggende
   i `$TMPDIR` til systemet rydder der.

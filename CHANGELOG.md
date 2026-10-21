@@ -5,7 +5,7 @@ versjonene følger semantisk versjonering.
 
 ## [Ikke utgitt] – grenen `feat/uten-mod`
 
-Samme diktering uten mod, uten MCP-server og uten kroker (docs/decisions/NTA-0008).
+Samme diktering uten mod og uten MCP-server, med én vanlig hook (docs/decisions/NTA-0008).
 
 ### Endret
 
@@ -23,7 +23,7 @@ Samme diktering uten mod, uten MCP-server og uten kroker (docs/decisions/NTA-000
 
 ### Fjernet
 
-- Modden (`hooks/`), MCP-serveren (`mcp/`, `.mcp.json`), typekontrakten (`types/`,
+- Modden (`hooks/register.tsx`), MCP-serveren (`mcp/`, `.mcp.json`), typekontrakten (`types/`,
   `tsconfig.json`) og testene som hørte til dem. Dermed er også installasjonen av
   MCP-SDK-en fra PyPI borte: pluginen bruker ikke nett.
 - Knappen, hurtigtasten, Angre og `/norsk selvtest`, som trengte modden.
@@ -31,8 +31,13 @@ Samme diktering uten mod, uten MCP-server og uten kroker (docs/decisions/NTA-000
 
 ### Lagt til
 
-- `tests/test_dikter.py` (skriptet, opptaksbanen med testkilde, ende-til-ende med modell) og
-  `tests/test_skills.py` (skillene, manifestet og «ingen mod»).
+- En vanlig `PreToolUse`-hook på Bash (`hooks/hooks.json`, `scripts/avvis-opptak`) som nekter
+  modellens kall som kjører `scripts/dikter` uten `--fil`. Målt i en innlogget økt: uten hooken
+  kjørte modellen skriptet via Bash uten forespørsel i auto-modus (vanlig modus ba om
+  tillatelse); med hooken ble kallet avvist i begge moduser. Hooken utløses ikke av skillens
+  injiserte kommando, så brukerens egen start er upåvirket.
+- `tests/test_avvis_opptak.py`, `tests/test_dikter.py` (skriptet, opptaksbanen med testkilde, ende-til-ende med modell) og
+  `tests/test_skills.py` (skillene, manifestet, «ingen mod» og den ene kroken).
 
 Kjernen, preregistreringen og kalibreringen er urørt: `tests/test_preregistrering.py` er grønn.
 

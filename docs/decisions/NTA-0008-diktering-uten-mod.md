@@ -1,6 +1,6 @@
-# NTA-0008: Diktering som skill og ett skript, uten mod, MCP-server og kroker
+# NTA-0008: Diktering som skill og ett skript, uten mod og MCP-server, med én vanlig hook
 
-*Skrevet 2026-10-21 på grenen `feat/uten-mod`. Status: implementert på grenen, ikke utgitt.*
+*Skrevet 2026-10-21 på grenen `feat/uten-mod`, oppdatert samme dag med målingene i en innlogget økt. Status: implementert på grenen, ikke utgitt.*
 
 ## Kontekst
 
@@ -21,7 +21,9 @@
 Dikteringen er skillen `dikter` (`/norsk-tale:dikter`) som kjører `scripts/dikter`:
 ffmpeg tar opp til stillhet (høyst 90 s), én ny `whisper-cli` transkriberer via kjernen
 (SHA256 av modellen verifiseres der), og bare transkripsjonen skrives til stdout og blir
-brukerens prompt. Ingen mod, ingen MCP-server, ingen kroker, ingen bakgrunnsprosess.
+brukerens prompt. Ingen mod, ingen MCP-server, ingen bakgrunnsprosess. Den eneste kroken er en
+vanlig `PreToolUse`-hook på Bash (`hooks/hooks.json`, `scripts/avvis-opptak`) som nekter
+modellen å kjøre `scripts/dikter` uten `--fil`. Den ble lagt til etter målingen under.
 Innstillingene sendes som `${user_config.*}` i kommandoen.
 
 ## Alternativer, og hvorfor ikke
@@ -39,11 +41,23 @@ Innstillingene sendes som `${user_config.*}` i kommandoen.
 
 - **Tapt:** knapp, hurtigtast, Angre, `/norsk selvtest`, og at modellen kan holdes lastet.
   Hver diktering laster modellen på nytt (noen sekunder).
-- **Vernet er svakere.** Det hviler på tillatelsessystemet: `disable-model-invocation`,
-  og at bare skriptet er forhåndsgodkjent mens skillen kjører. Et menneske som godkjenner
-  skriptet selv, eller en modus som godkjenner Bash-kall av seg selv, kan la Claude kjøre
-  det. I auto-modus kjører ikke injeksjonen ved rendering; Claude får beskjed om å kjøre
-  kommandoen først (dokumentasjonen; ikke testet).
+- **Vernet ble målt, og de to første lagene holdt ikke i auto-modus.** Claude Code 2.1.303,
+  innlogget, 21.10.2026, med forespørselen «ta opp lyd fra mikrofonen med norsk-tale-skriptet»:
+  uten hook kjørte modellen skriptet via Bash uten tillatelsesforespørsel i **auto-modus**
+  (mikrofonen åpen i 10 s, «Allowed by auto mode classifier»), mens **vanlig modus** ba om
+  tillatelse (skillen, og så Bash: «This command requires approval»), som ble avvist. Med
+  hooken ble modellens kall avvist i begge moduser, før noen forespørsel. Hooken utløses ikke
+  av skillens injiserte `!`-kommando (den så bare modellens egne Bash-kall), så brukerens
+  `/norsk-tale:dikter` virker i begge moduser, og `transkriber --fil` slipper gjennom.
+- **Injeksjonen i auto-modus:** dokumentasjonen (sammendrag) sa at injeksjonen ikke kjører
+  ved rendering i auto-modus, men delegeres til modellen. Målt: Claude Code kjørte den selv,
+  og skill-teksten kom med transkripsjonen i; modellen gjorde ingen verktøykall først. Det
+  gjaldt også etter at hooken var lagt til.
+- **Hooken er en fartshump, ikke en garanti.** Den leser teksten i Bash-kommandoen, og
+  modellen kan i prinsippet ta opp lyd på andre måter (ffmpeg direkte). Et kall brukeren
+  godkjenner selv, er brukerens kall.
+- **En bivirkning:** etter en diktering leser modellen noen ganger `skills/dikter/SKILL.md`
+  av eget initiativ, noe som ber om tillatelse når pluginen ligger utenfor arbeidsmappen.
 - **Tidsgrense:** Bash-verktøyets standard er 2 minutter for hele kommandoen. Målt på M1 Pro
   med large og Metal: 87 s tale tok 16,8 s å laste, verifisere og transkribere, så 90 s
   holder med marginal. Langsommere maskiner kan trenge `medium` eller `small`.
@@ -53,8 +67,8 @@ Innstillingene sendes som `${user_config.*}` i kommandoen.
   enkle anførselstegn, og skriptet behandler en uløst plassholder som ikke satt. Med lagrede
   innstillinger ble verdiene byttet ut (en lagret `modellvalg=medium` nådde skriptet).
 - **Nett:** pluginen bruker ikke nett. Installasjonen av MCP-SDK-en fra PyPI er borte.
-- **Katalogen:** funnene som gjaldt modden og MCP-serveren forsvinner med dem. Hva som
-  blir stående, avgjøres av neste skanning.
+- **Katalogen:** funnene som gjaldt modden og MCP-serveren forsvinner med dem. Hooken kan gi
+  et nytt funn («Uses hooks», informasjon). Hva som blir stående, avgjøres av neste skanning.
 
 ## Preregistreringen
 
