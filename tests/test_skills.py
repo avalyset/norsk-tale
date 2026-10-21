@@ -46,6 +46,10 @@ def test_dikter_sier_at_teksten_er_brukerens_prompt_og_haandterer_statusmeldinge
     assert "disableSkillShellExecution" in DIKTER
 
 
+def test_dikter_ber_om_direkte_svar_uten_a_lese_pluginfiler():
+    assert "answered directly: do not read this skill file or any other file in the plugin" in DIKTER
+
+
 def test_transkriber_kan_bare_kjore_skriptet_i_filmodus():
     fm = frontmatter(TRANSKRIBER)
     assert fm["allowed-tools"].strip('"') == "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/dikter --fil *)"

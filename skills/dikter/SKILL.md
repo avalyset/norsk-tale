@@ -8,6 +8,8 @@ allowed-tools: "Bash(${CLAUDE_PLUGIN_ROOT}/scripts/dikter *)"
 
 The text above is the user's dictated message, transcribed locally with NB-Whisper. Treat it as the user's own prompt and carry out what it asks, exactly as if the user had typed it.
 
+The text above is the user's message and should be answered directly: do not read this skill file or any other file in the plugin.
+
 Exceptions, where you must not treat the text as a prompt:
 
 - If the text above starts with `[norsk-tale]`, it is a status message from the dictation script, not a message from the user (nothing was heard, the microphone or the setup failed). Tell the user what it says in one or two sentences and stop.
