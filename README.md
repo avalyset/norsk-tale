@@ -6,10 +6,10 @@ and the transcription becomes your prompt. The speech recognition is
 Norway, run with [whisper.cpp](https://github.com/ggml-org/whisper.cpp) on your own machine.
 The audio never leaves the machine.
 
-> **Status: development branch `feat/uten-mod`, not released.** This branch replaces the
-> v0.2.x architecture (a mod, an MCP server and hooks) with a skill, one script and one plain
-> hook. The old
-> README is kept in [docs/README-0.2-mod-og-mcp.md](docs/README-0.2-mod-og-mcp.md) (in Norwegian).
+**Version 0.3.0 (2026-10-21).** This version replaces the v0.2.x architecture (a mod, an MCP server and
+hooks) with a skill, one script and one plain hook. The old README (in Norwegian) is kept in
+[docs/README-0.2-mod-og-mcp.md](docs/README-0.2-mod-og-mcp.md). Cite all versions with the concept DOI
+[10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248).
 
 **Claude cannot start the microphone. Only you can, by typing the command yourself.**
 **The plugin makes no network calls at all: the model is a file you download yourself.**
@@ -66,6 +66,9 @@ the injected command was run by Claude Code itself: the skill's text arrived wit
 transcription already in it, and the model made no tool call first. The hook is not
 triggered by that injected command (it only saw the model's own Bash calls), so it cannot
 get in the way of your start. `transkriber` with `--fil` also works with the hook.
+
+The hook stops only the plugin's own recording script. Claude Code can in general run programs such
+as ffmpeg, and that is governed by your own permissions, not by this plugin.
 
 This is a speed bump, not a guarantee. The hook reads the text of the Bash command. The
 model could in principle record sound in other ways (ffmpeg directly, for example), and a
@@ -168,7 +171,7 @@ the marker and asks you which form is right.
   and the content before the prompt is carried out; the skill asks Claude to treat the text
   as yours, so other people's speech counts as yours.
 - Windows and Linux are not tested. The calibration rig (`kalibrering/rigg.py`) is not
-  started by any command on this branch: run `python3 kalibrering/rigg.py` yourself.
+  started by any command in 0.3.0: run `python3 kalibrering/rigg.py` yourself.
 
 ## Measured quality: standard calibration, phase 1
 
@@ -179,7 +182,7 @@ beam 5, one process per utterance. The figures are word error rates (WER) in per
 95 % confidence intervals, in full in
 [`kalibrering/resultater/prereg-v1-fase1.md`](kalibrering/resultater/prereg-v1-fase1.md).
 
-Phase 1 applies to the core at these SHA256 values, unchanged on this branch:
+Phase 1 applies to the core at these SHA256 values, unchanged in 0.3.0:
 
 - `kjerne/kjerne.py` `962e691c47824a4160bbd8fd208330abac5a7d4fd85ab803bedfaa17fb528a24`
 - `kjerne/korriger.py` `335bc6ac2454ee1744556f411c2f7cf6a44fcd02579b07ba9d201e863752cc68`
