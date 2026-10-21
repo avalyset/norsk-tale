@@ -22,12 +22,6 @@ whisper.cpp
 FFmpeg
   FFmpeg-utviklerne, LGPL/GPL. Installeres separat.
 
-MCP Python SDK (mcp 2.3.0) og avhengighetene i mcp/krav.txt
-  Model Context Protocol-prosjektet, MIT-lisens (avhengighetene har egne lisenser).
-  https://modelcontextprotocol.io
-  Følger ikke med norsk-tale; installeres fra PyPI i pluginens datamappe første
-  gang MCP-serveren starter, med låste versjoner og SHA256-hasher.
-
 Data brukt i standardkalibreringen (kalibrering/), ikke inkludert eller distribuert:
 
 FLEURS (google/fleurs, nb_no, test)

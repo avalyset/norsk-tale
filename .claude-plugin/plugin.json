@@ -23,7 +23,6 @@
   "supportUrl": "https://github.com/avalyset/norsk-tale/issues",
   "privacyPolicyUrl": "https://github.com/avalyset/norsk-tale/blob/main/PRIVACY.md",
   "termsOfServiceUrl": "https://github.com/avalyset/norsk-tale/blob/main/LICENSE",
-  "types": "./types/index.d.ts",
   "userConfig": {
     "modellvalg": {
       "type": "string",
@@ -47,12 +46,6 @@
       "type": "string",
       "title": "whisper-cli",
       "description": "Navn eller sti til whisper-cli fra whisper.cpp. Tom: whisper-cli på PATH. En eventuell whisper-server (holder modellen lastet) letes etter i samme mappe, eller på PATH når bare navnet er gitt.",
-      "default": ""
-    },
-    "opptak": {
-      "type": "string",
-      "title": "Opptaksmappe",
-      "description": "Mappe for kalibreringsopptak og selvtest-resultater, utenfor repoet. Tom: NORSK_TALE_OPPTAK, ellers ~/norsk-tale-opptak. Ligger den på et eksternt volum som ikke er montert, stopper norsk-tale i stedet for å skrive til intern disk.",
       "default": ""
     }
   }
