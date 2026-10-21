@@ -26,9 +26,8 @@ const rig = (on: On, startUtkast = '', montert = true, hort = HORT) => {
   let nr = 0
 
   const klokke = mock.clock(on)
-  mock.env(on, { TMPDIR: '/tmp/test/', HOME: '/hjem/test' })
+  mock.env(on, { TMPDIR: '/tmp/test/' })
   on('session.id', () => ({ value: 'okt-1' }))
-  on('fs.write', ($, e) => { skrevet.push({ path: e.path, text: e.text }); return { value: undefined } })
   on('mcp.connect', () => ({ value: { isConnected: true as const, server: 'plugin:norsk-tale:norsk-tale' } }))
   on('mcp.call', ($, e) => {
     verktoy.push(e.tool)
@@ -42,8 +41,12 @@ const rig = (on: On, startUtkast = '', montert = true, hort = HORT) => {
       const etter = Number(e.args.etter ?? 0)
       return svar({ hendelser: ko.filter(h => h.nr > etter), nr, opptak: false })
     }
-    if (e.tool === 'sjekk_mappe') {
-      return svar(montert ? { ok: true } : { ok: false, melding: 'norsk-tale: /Volumes/Vault er ikke montert.' })
+    if (e.tool === 'lagre_selvtest') {
+      // Serveren bestemmer mappe og filnavn; her speiles det den gjør (og nekter ved umontert volum).
+      if (!montert) return svar({ ok: false, melding: 'norsk-tale: /Volumes/Vault er ikke montert.' })
+      const path = `/hjem/test/norsk-tale-opptak/selvtest-claude-${String(e.args.stempel)}.json`
+      skrevet.push({ path, text: String(e.args.rapport) })
+      return svar({ ok: true, fil: path })
     }
     return svar({ ok: true })
   })

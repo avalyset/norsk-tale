@@ -50,7 +50,8 @@ innstillinger.
   ingen utgående nettverkskall. «Eksporter bidrag» lager en fil med bare tall,
   uten lyd og uten tekst, og bare når du ber om det.
 - `/norsk selvtest` lagrer resultatet som `~/norsk-tale-opptak/selvtest-claude-<tidspunkt>.json`:
-  det som sto i promptboksen etter dikteringen, og om Angre virket. Ingen lyd.
+  det som sto i promptboksen etter dikteringen, og om Angre virket. Ingen lyd. Fila
+  skrives av pluginens MCP-server, ikke av modden.
 - Fanen «Selvtest» i `/norsk kalibrer` lagrer `selvtest-<tidspunkt>.json` i samme
   mappe: setningene, teksten som ble transkribert, målingene og scoren. Lyden
   konverteres i en midlertidig katalog som slettes, og lagres ikke.

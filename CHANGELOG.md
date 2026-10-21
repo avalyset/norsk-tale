@@ -5,7 +5,8 @@ versjonene følger semantisk versjonering.
 
 ## [0.2.3] – 2026-10-19
 
-Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring.
+Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring for brukeren:
+selvtestrapporten får samme innhold og havner samme sted.
 
 ### Endret
 
@@ -20,6 +21,15 @@ Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring.
   Resten av Claude Codes miljø (også eventuelle nøkler) når ikke serveren, ffmpeg
   eller whisper. `.mcp.json` sender fortsatt bare de fem `NORSK_TALE_VALGT_*`-verdiene
   fra `${user_config.*}`.
+- Modden skriver ingen filer og leser ingen miljøvariabler lenger (`$.fs` og `$.env`
+  er ute). Selvtestrapporten skrives av MCP-serveren: det nye verktøyet
+  `lagre_selvtest` erstatter `sjekk_mappe`. Serveren bestemmer mappe og filnavn og
+  nekter alt som ikke er et gyldig tidsstempel, og et umontert eksternt volum stopper
+  skrivingen som før.
+- Hvert `$.mcp.call` i modden har verktøynavnet som fast tekst (`kall` er en `switch`
+  i stedet for en videresending av et variabelt navn).
+- README har fått en engelsk seksjon «What this plugin does»: hva modden skriver, sender
+  og kjører, og hva mikrofonvernets hooks ser og bestemmer.
 - README lenker til Nasjonalbibliotekets leverandørliste for NB-Whisper
   (`NbAiLab/nostram`, `leverandorer.md`), der norsk-tale er oppført.
 - README har fått seksjonen «Til katalogens vurderere», som svarer på hvert funn med
@@ -31,7 +41,10 @@ Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring.
 ### Lagt til
 
 - `tests/test_katalogregler.py`: modden hooker ingen nett-, MCP- eller programkall,
-  og verktøyhookene har matcheren.
+  verktøyhookene har matcheren, modden bruker ikke `$.fs`/`$.env`, og hvert
+  `$.mcp.call` har verktøynavnet som fast tekst.
+- `tests/test_mcp_server.py`: `lagre_selvtest` skriver bare riktig navngitt JSON i
+  opptaksmappa og avviser ugyldige tidsstempler og ugyldig JSON.
 - `tests/test_mcp_start.py`: serveren får bare de tillatte miljøvariablene.
 
 ## [0.2.2] – 2026-10-19

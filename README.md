@@ -365,7 +365,7 @@ modden eller skillen. Claude Code starter serveren selv fra `.mcp.json` med
 | Verktøy | Hvem kan kalle det |
 |---|---|
 | `transkriber_fil` | Claude, for en lydfil du peker på |
-| `start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`, `sjekk_mappe` og `start_kalibrering` | Bare modden |
+| `start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`, `lagre_selvtest` og `start_kalibrering` | Bare modden |
 
 Modden skjuler de øvrige verktøyene for Claude (`tool.describe`) og avviser alle kall
 til dem som ikke kommer fra modden selv (`tool.check` og `tool.call`, etter hvem som
@@ -374,14 +374,16 @@ din snarvei gjør det.
 
 **Filer pluginen skriver:**
 
-- Selvtestresultatet `selvtest-claude-<tidspunkt>.json` i opptaksmappa (fra
-  modden).
+- Selvtestresultatet `selvtest-claude-<tidspunkt>.json` i opptaksmappa. Det er
+  MCP-serveren som skriver fila (verktøyet `lagre_selvtest`); modden skriver ingen
+  filer.
 - MCP-SDK-ens venv i pluginens datamappe.
 - Kalibreringsriggens opptak og resultater i opptaksmappa, se `/norsk kalibrer`.
 
 Pluginen skriver ingen bygge-, oppstarts-, innstillings- eller instruksjonsfiler.
 
-**Det modden leser og sender:** Den leser teksten i promptboksen for å sette inn
+**Det modden leser og sender:** Den leser ingen miljøvariabler og ingen filer. Den
+leser teksten i promptboksen for å sette inn
 dikteringen ved markøren, for Angre og for selvtestens sjekk. Den sender aldri inn
 prompten. Den eneste nettverkstrafikken under bruk er loopback (`127.0.0.1`): til
 `whisper-server` og mellom nettleseren og riggen. Teksten går til Claude først når
@@ -396,29 +398,105 @@ du selv sender prompten.
 - `session.start` registrerer kommandoen.
 - `tool.describe`, `tool.check` og `tool.call` er mikrofonvernet beskrevet over.
 
+## What this plugin does
+
+norsk-tale is local Norwegian speech-to-text for Claude Code. This section says what it
+writes, what it sends, what it runs and what its hooks see.
+
+**Nothing leaves your machine.** Audio, transcriptions and test reports stay local.
+The only network use is a one-time `pip install` of the MCP SDK from PyPI at first
+start, pinned to exact versions with SHA256 hashes (`mcp/krav.txt`, `pip install
+--require-hashes --only-binary :all:`). While you use the plugin there are no outgoing
+connections; the only connections are loopback (`127.0.0.1`), to a local
+`whisper-server` and between your browser and the calibration rig. Dictated text is
+put into the prompt box and goes to Claude only when you submit the prompt yourself,
+like any other text you type.
+
+**Files it writes**
+
+- `selvtest-claude-<timestamp>.json` in the recordings folder (default
+  `~/norsk-tale-opptak`, or the folder set in the plugin settings), after
+  `/norsk selvtest`. It holds two pass/fail results and the dictated test sentence, no
+  audio. It is written by the plugin's MCP server (tool `lagre_selvtest`,
+  `mcp/server.py:134`), not by the mod, which writes no files. The server chooses the
+  folder and file name and accepts only a valid timestamp. Nothing reads or runs the
+  file.
+- The MCP SDK's virtual environment in the plugin's data folder (`CLAUDE_PLUGIN_DATA`).
+- Calibration recordings and results in the recordings folder, only if you run
+  `/norsk kalibrer`.
+
+It writes no build, start-up, settings or instruction files.
+
+**What it runs, and when.** All local programs are started by the plugin's MCP server
+(`mcp/server.py`), never by the mod or the skill:
+
+- `pip`, once, at first start, to install the MCP SDK.
+- `ffmpeg` and `whisper-cli` (or `whisper-server` when present) when you press the
+  button or the shortcut, to record and transcribe.
+- `whisper-cli` when you ask Claude to transcribe an audio file (the skill tool
+  `transkriber_fil`).
+- The environment check for `/norsk oppsett`, and the calibration rig
+  (`kalibrering/rigg.py`) with `open` (macOS) or `xdg-open` (Linux) for
+  `/norsk kalibrer`.
+
+The mod itself starts no processes and reads no environment variables. It calls the
+plugin's own MCP tools (`hooks/register.tsx:228`-`234`, each tool name written out in
+the call): `start_opptak` and `stopp_opptak` when you press the button or shortcut,
+`status` while recording, `frigjor` for `/norsk av`, `oppsett` for `/norsk oppsett`,
+`lagre_selvtest` at the end of `/norsk selvtest`, and `start_kalibrering` for
+`/norsk kalibrer`. It reads the prompt box only to insert the dictated text, to undo it
+and to check the self-test, and it never submits the prompt. The MCP server is started
+with a filtered environment: only `PATH`, `HOME`, `TMPDIR`, locale variables, what
+`xdg-open` and Windows need, and `NORSK_TALE_*` reach it. No credentials are read.
+
+**What the hooks see and decide** (`hooks/register.tsx`)
+
+- `tool.describe` (line 436), `tool.check` (line 442) and `tool.call` (line 447) are
+  the microphone guard that stops the model from starting a recording. Each has a
+  matcher (`VERNEDE`, line 194) that selects only this plugin's seven internal tools
+  (`start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`, `lagre_selvtest`,
+  `start_kalibrering`); every other tool passes by untouched.
+  - `tool.describe` sees the description of those tools when Claude's tool list is built,
+    and replaces it with a hidden, deferred stub, so Claude does not see them.
+  - `tool.check` and `tool.call` see a call to one of them and refuse it unless it
+    comes from this mod (`next.origin.plugin`), so a call made by the model is denied.
+  - Only `transkriber_fil` stays visible to Claude: it transcribes an audio file you
+    point to.
+  - A test (`tests/norsk.test.ts`, "mikrofonvern") fails if the guard is removed.
+- `command.run` (line 413) answers only the plugin's own `/norsk` command.
+- `prompt.submit` (line 454) blocks Enter while the self-test runs so nothing is sent;
+  otherwise it clears the undo state and passes the prompt on unchanged.
+- `ui.render` draws the button row above the prompt and the self-test panel;
+  `session.start` registers the `/norsk` command.
+- There is no hook on `mcp.call`, on network calls or on process calls.
+
 ## Til katalogens vurderere
 
 Svar på funnene fra katalogens automatiske sjekk, med fil og linje i
 `hooks/register.tsx` slik de står i denne versjonen.
 
-- **Linje 114, skriver en fil:** `/norsk selvtest` skriver en selvtestrapport
-  (JSON, uten lyd og uten transkripsjon) til opptaksmappa,
-  `selvtest-claude-<tidspunkt>.json`. Ingen kode leser eller kjører fila. Det er
-  ingen bygge-, oppstarts-, innstillings- eller instruksjonsfil.
-- **Linje 236, kaller verktøy selv:** modden kaller bare pluginens egne
-  MCP-verktøy (`start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`,
-  `sjekk_mappe` og `start_kalibrering`), og bare når du trykker på knappen, bruker
-  snarveien eller skriver `/norsk`. Den sender ingenting ut av maskinen. Av
-  samtalen leser den bare promptboksen den skriver dikteringen inn i, og den sender
-  aldri inn prompten.
-- **Linje 444, hook på tillatelsessjekken:** `tool.check` avviser modellens kall til
-  de sju verktøyene over (mikrofonvernet) og gjør ingenting annet. Alle andre
-  verktøy går forbi urørt.
-- **Hooker verktøykall (linje 438, 444 og 449):** modden lytter på `tool.describe`,
-  `tool.check` og `tool.call`, hver med en matcher som bare velger de sju
-  verktøynavnene over (`VERNEDE`, linje 207). Hooken på `mcp.call` som sto på
-  linje 455 i 0.2.2, er fjernet. Modden hooker ingen nettverks- eller programkall.
-- **Linje 415, `command.run`:** hooken har matcheren `{ command: 'norsk' }` og
+- **Selvtestrapporten (`hooks/register.tsx:79`, kallet på linje 95):** modden skriver
+  ingen filer og bruker ikke `$.fs`. `/norsk selvtest` ber MCP-serveren lagre en
+  rapport (verktøyet `lagre_selvtest`, `mcp/server.py:134`). Serveren bestemmer mappe
+  og filnavn selv, `selvtest-claude-<tidspunkt>.json` i opptaksmappa, og nekter
+  alt som ikke er et gyldig tidsstempel. Rapporten er JSON uten lyd og uten
+  transkripsjon. Ingen kode leser eller kjører fila. Det er ingen bygge-,
+  oppstarts-, innstillings- eller instruksjonsfil.
+- **Verktøykall (`hooks/register.tsx:228`–`234`, tilkoblingen på linje 212):** modden
+  kaller bare pluginens egne MCP-verktøy, og hvert verktøynavn står som fast tekst
+  ved `$.mcp.call`: `start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`,
+  `lagre_selvtest` og `start_kalibrering`. Det skjer bare når du trykker på
+  knappen, bruker snarveien eller skriver `/norsk`. Den sender ingenting ut av
+  maskinen. Av samtalen leser den bare promptboksen den skriver dikteringen inn i,
+  og den sender aldri inn prompten. Den leser ingen miljøvariabler.
+- **Hook på tillatelsessjekken (`hooks/register.tsx:442`):** `tool.check` avviser
+  modellens kall til de sju verktøyene over (mikrofonvernet) og gjør ingenting
+  annet. Alle andre verktøy går forbi urørt.
+- **Hooker verktøykall (`hooks/register.tsx:436`, 442 og 447):** modden lytter på
+  `tool.describe`, `tool.check` og `tool.call`, hver med en matcher som bare velger de
+  sju verktøynavnene over (`VERNEDE`, linje 194). Hooken på `mcp.call` som sto i
+  0.2.2, er fjernet. Modden hooker ingen nettverks- eller programkall.
+- **`command.run` (`hooks/register.tsx:413`):** hooken har matcheren `{ command: 'norsk' }` og
   svarer bare på pluginens egen kommando `/norsk` (med argumentene `angre`, `av`,
   `oppsett`, `selvtest` og `kalibrer`). Andre kommandoer ser den ikke.
 - **Miljøvariabler til MCP-serveren:** `.mcp.json` sender bare fem verdier, alle fra
@@ -436,7 +514,9 @@ Svar på funnene fra katalogens automatiske sjekk, med fil og linje i
   `tests/test_rigg.py` (en negativkontroll for nettforbudet, uten nedlasting).
 - **Ikon:** `assets/icon.png` er bare et bilde. Ingen kode kjører det.
 - **Legitimasjon:** ingen kode leser innloggingsopplysninger, nøkler eller filer
-  med slike. Riggen lager selv et tilfeldig engangstoken for `127.0.0.1`.
+  med slike, og modden leser ingen miljøvariabler. Serveren leser bare `NORSK_TALE_*`
+  og, via operativsystemet, `HOME` og `PATH` for å finne mapper og programmer. Riggen
+  lager selv et tilfeldig engangstoken for `127.0.0.1`.
 
 ## Personvern
 
@@ -447,8 +527,9 @@ forbindelsene er loopback (`127.0.0.1`): til en lokal `whisper-server` når den
 finnes, og mellom nettleseren og kalibreringsriggen når du bruker `/norsk kalibrer`.
 Teksten du sender til Claude, går dit som all annen tekst du sender.
 
-Av miljøet leser pluginen bare `HOME`, `PATH` (for å finne programmene) og egne
-`NORSK_TALE_*`-variabler. Den leser ingen innloggingsopplysninger.
+Modden leser ingen miljøvariabler. Av miljøet leser MCP-serveren bare `HOME`, `PATH`
+(for å finne programmene) og egne `NORSK_TALE_*`-variabler. Ingenting leser
+innloggingsopplysninger.
 `huggingface.co` står her bare som kilde og kreditering.
 
 ## Utvikling

@@ -76,42 +76,29 @@ export async function etterAngre($: EngineInterface): Promise<boolean> {
   return true
 }
 
-// Opptaksmappa: userConfig «opptak», ellers NORSK_TALE_OPPTAK, ellers ~/norsk-tale-opptak.
-let opptakValg = ''
-export function settOpptaksmappe(v: string) { opptakValg = v }
-
-export async function opptaksmappe($: EngineInterface): Promise<string> {
-  const home = (await $.env.get('HOME')) ?? ''
-  const valgt = opptakValg || (await $.env.get('NORSK_TALE_OPPTAK')) || `${home}/norsk-tale-opptak`
-  return valgt.startsWith('~/') ? home + valgt.slice(1) : valgt
-}
-
-// Et eksternt volum som ikke er montert, skal stoppe skrivingen: $.fs.write ville
-// ellers opprettet mappa under /Volumes på intern disk. Sjekken gjøres av serveren.
-async function montert($: EngineInterface, mappe: string): Promise<string | null> {
-  try {
-    const r = await kall($, 'sjekk_mappe', { sti: mappe })
-    return r.ok === true ? null : String(r.melding ?? 'Opptaksmappa er ikke tilgjengelig.')
-  } catch (feil) {
-    return `Kunne ikke sjekke opptaksmappa: ${String(feil)}`
-  }
-}
-
 export async function avslutt($: EngineInterface, avbrutt: boolean): Promise<string> {
   const st = await read($, selvtest)
   if (!st) return 'Ingen selvtest å avslutte.'
   await $.prompt.fill({ text: '', mode: 'replace' })
-  const mappe = await opptaksmappe($)
-  const stempel = new Date(await $.clock.now()).toISOString().replace(/[:]/g, '').replace(/\..*$/, '')
-  const lagringsfeil = await montert($, mappe)
-  const fil = lagringsfeil ? null : `${mappe}/selvtest-claude-${stempel}.json`
-  const ferdig: NorskSelvtest = { ...st, aktiv: false, steg: 'ferdig', avbrutt, fil, lagringsfeil }
+  const naa = new Date(await $.clock.now())
+  const stempel = naa.toISOString().replace(/[:]/g, '').replace(/\..*$/, '')
   const rapport = {
-    norsk_tale_selvtest: 2, kilde: 'claude-code', tidspunkt: new Date(await $.clock.now()).toISOString(), avbrutt,
-    oppsummering: oppsummer(ferdig), innsetting: ferdig.innsetting, angre: ferdig.angre,
+    norsk_tale_selvtest: 2, kilde: 'claude-code', tidspunkt: naa.toISOString(), avbrutt,
+    oppsummering: oppsummer({ ...st, avbrutt }), innsetting: st.innsetting, angre: st.angre,
     merknad: 'Ingen lyd er lagret. Seks-setningstesten med scoring kjøres i kalibreringsriggen (/norsk kalibrer → Selvtest).',
   }
-  if (fil) await $.fs.write(fil, JSON.stringify(rapport, null, 2) + '\n')
+  // Rapporten skrives av MCP-serveren, som bestemmer mappe og filnavn og stopper ved et
+  // umontert eksternt volum. Modden skriver ingen filer og leser ingen miljøvariabler.
+  let fil: string | null = null
+  let lagringsfeil: string | null = null
+  try {
+    const r = await kall($, 'lagre_selvtest', { rapport: JSON.stringify(rapport, null, 2), stempel })
+    if (r.ok === true && typeof r.fil === 'string') fil = r.fil
+    else lagringsfeil = String(r.melding ?? 'Opptaksmappa er ikke tilgjengelig.')
+  } catch (feil) {
+    lagringsfeil = `Kunne ikke lagre selvtestrapporten: ${String(feil)}`
+  }
+  const ferdig: NorskSelvtest = { ...st, aktiv: false, steg: 'ferdig', avbrutt, fil, lagringsfeil }
   await update($, selvtest, () => ferdig)
   await $.ui.open({ id: PANE, title: 'norsk-tale selvtest' })
   const hvor = fil ? `Resultat: ${fil}` : `Resultatet ble IKKE lagret: ${lagringsfeil}`
@@ -196,7 +183,7 @@ export function medMellomrom(utkast: string, markor: number, tekst: string): str
 export const SERVERNOKKEL = 'norsk-tale'
 // Verktøyene som bare modden får kalle. Modellen ser og får kalle bare
 // transkriber_fil (en lydfil brukeren peker på). Claude kan aldri starte mikrofonen.
-export const BARE_MODDEN = ['start_opptak', 'stopp_opptak', 'status', 'frigjor', 'oppsett', 'sjekk_mappe',
+export const BARE_MODDEN = ['start_opptak', 'stopp_opptak', 'status', 'frigjor', 'oppsett', 'lagre_selvtest',
   'start_kalibrering'] as const
 export const AVVIST = 'norsk-tale: verktøyet brukes bare av pluginens knapp og kommandoer. '
   + 'Claude kan aldri starte mikrofonen; bare brukerens trykk eller snarvei gjør det.'
@@ -204,7 +191,7 @@ const SLUTT = new Set(['tekst', 'tom', 'feil'])
 
 // Navnet modellen og hookene ser: mcp__plugin_norsk-tale_norsk-tale__<verktøy>.
 // Mikrofonvernets hooks matcher bare disse navnene og ser ingen andre verktøy.
-export const VERNEDE = /^mcp__.*norsk[-_]tale.*__(start_opptak|stopp_opptak|status|frigjor|oppsett|sjekk_mappe|start_kalibrering)$/
+export const VERNEDE = /^mcp__.*norsk[-_]tale.*__(start_opptak|stopp_opptak|status|frigjor|oppsett|lagre_selvtest|start_kalibrering)$/
 
 export function bareForModden(navn: string): boolean {
   const m = /^mcp__.*norsk[-_]tale.*__([a-z_]+)$/.exec(navn)
@@ -228,12 +215,24 @@ async function kobleTil($: EngineInterface): Promise<string> {
   return r.server
 }
 
-// Ett verktøykall. Serveren svarer med et objekt: som structuredContent og som
+// Ett verktøykall. Hvert verktøynavn står som fast tekst ved kallet; det finnes ingen
+// annen vei til $.mcp.call. Serveren svarer med et objekt: som structuredContent og som
 // JSON i en tekstblokk. structuredContent leses først; en innpakket «result»
 // (en verdi SDK-en pakket inn) pakkes ut.
-async function kall($: EngineInterface, verktoy: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+type Verktoy = 'start_opptak' | 'stopp_opptak' | 'status' | 'frigjor' | 'oppsett' | 'lagre_selvtest' | 'start_kalibrering'
+
+async function kall($: EngineInterface, verktoy: Verktoy, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
   const navn = await kobleTil($)
-  const r = await $.mcp.call(navn, verktoy, args)
+  let r
+  switch (verktoy) {
+    case 'start_opptak': r = await $.mcp.call(navn, 'start_opptak', args); break
+    case 'stopp_opptak': r = await $.mcp.call(navn, 'stopp_opptak', args); break
+    case 'status': r = await $.mcp.call(navn, 'status', args); break
+    case 'frigjor': r = await $.mcp.call(navn, 'frigjor', args); break
+    case 'oppsett': r = await $.mcp.call(navn, 'oppsett', args); break
+    case 'lagre_selvtest': r = await $.mcp.call(navn, 'lagre_selvtest', args); break
+    case 'start_kalibrering': r = await $.mcp.call(navn, 'start_kalibrering', args); break
+  }
   const tekst = r.content.map(b => (typeof b.text === 'string' ? b.text : '')).join('')
   if (r.isError) throw new Error(tekst || `${verktoy} feilet`)
   return tolkSvar(r.structuredContent, tekst)
@@ -399,8 +398,7 @@ async function angreNa($: EngineInterface): Promise<string> {
   return 'Prompten er satt tilbake.'
 }
 
-export const register: Register = (on, options) => {
-  settOpptaksmappe(String(options.opptak ?? ''))
+export const register: Register = (on) => {
 
   on('session.start', async ($, e, next) => {
     await $.command.register({

@@ -207,7 +207,7 @@ describe('norsk-tale: mikrofonvern', () => {
     const skjult = await $.tool.describe({ tool: navn, description: 'Bare for norsk-tale-modden', provider: { plugin: 'norsk-tale', tier } })
     expect(skjult.isDeferred).toBe(true)
     expect(skjult.description).toContain('Ikke tilgjengelig for Claude')
-    for (const v of ['stopp_opptak', 'status', 'frigjor', 'oppsett', 'sjekk_mappe', 'start_kalibrering']) {
+    for (const v of ['stopp_opptak', 'status', 'frigjor', 'oppsett', 'lagre_selvtest', 'start_kalibrering']) {
       expect((await $.tool.check({ tool: MODELLNAVN(v), input: {}, tool_use_id: `m-${v}` })).decision).toBe('deny')
     }
     // Bare transkriber_fil er synlig og kan kalles av Claude.

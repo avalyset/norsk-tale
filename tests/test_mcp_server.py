@@ -35,13 +35,15 @@ def kjor(kall, prefiks=(), env=None):
 
 
 def test_serveren_lister_verktoyene_og_svarer():
-    ut = kjor([["status", {"etter": 0}], ["sjekk_mappe", {"sti": "/Volumes/norsk-tale-finnes-ikke/x"}]])
+    ut = kjor([["status", {"etter": 0}],
+               ["lagre_selvtest", {"rapport": "{}", "stempel": "2026-10-19T120000"}]],
+              env={"NORSK_TALE_OPPTAK": "/Volumes/norsk-tale-finnes-ikke/opptak"})
     assert ut["verktoy"] == sorted(["transkriber_fil", "start_opptak", "stopp_opptak", "status", "frigjor",
-                                    "oppsett", "sjekk_mappe", "start_kalibrering"])
+                                    "oppsett", "lagre_selvtest", "start_kalibrering"])
     status = json.loads(ut["svar"][0]["tekst"])
     assert status == {"hendelser": [], "nr": 0, "opptak": False}
-    mappe = json.loads(ut["svar"][1]["tekst"])
-    assert mappe["ok"] is False and "ikke montert" in mappe["melding"]
+    umontert = json.loads(ut["svar"][1]["tekst"])
+    assert umontert["ok"] is False and "ikke montert" in umontert["melding"]
 
 
 def test_oppsett_leser_innstillingene_fra_miljoet(tmp_path):
@@ -86,3 +88,18 @@ def test_mcp_json_sender_innstillingene_til_serveren():
     assert d["args"][2:] == ["--data", "${CLAUDE_PLUGIN_DATA}"]
     for k in ("modellvalg", "malform", "modell", "whisper", "opptak"):
         assert d["env"][f"NORSK_TALE_VALGT_{k.upper()}"] == "${user_config.%s}" % k
+
+
+def test_lagre_selvtest_skriver_bare_riktig_navngitt_json_i_opptaksmappa(tmp_path):
+    mappe = tmp_path / "opptak"
+    rapport = json.dumps({"norsk_tale_selvtest": 2, "avbrutt": False})
+    ut = kjor([["lagre_selvtest", {"rapport": rapport, "stempel": "2026-10-19T120000"}],
+               ["lagre_selvtest", {"rapport": rapport, "stempel": "../../etc/x"}],
+               ["lagre_selvtest", {"rapport": "ikke json", "stempel": "2026-10-19T120001"}]],
+              env={"NORSK_TALE_OPPTAK": str(mappe)})
+    ok, feil_navn, feil_json = (json.loads(s["tekst"]) for s in ut["svar"])
+    assert ok["ok"] is True and ok["fil"] == str(mappe / "selvtest-claude-2026-10-19T120000.json")
+    assert json.loads((mappe / "selvtest-claude-2026-10-19T120000.json").read_text(encoding="utf-8")) == json.loads(rapport)
+    assert feil_navn["ok"] is False and feil_json["ok"] is False
+    assert sorted(p.name for p in mappe.iterdir()) == ["selvtest-claude-2026-10-19T120000.json"]
+

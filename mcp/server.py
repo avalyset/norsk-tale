@@ -2,7 +2,8 @@
 
 All oppstart av lokale programmer i pluginen skjer her (docs/decisions/NTA-0007):
 lytteren (ffmpeg + whisper-cli/whisper-server via kjernen), kjernens
-oppsettsjekk, kalibreringsriggen og nettleseren som åpner den. Modden og skillen
+oppsettsjekk, kalibreringsriggen og nettleseren som åpner den. Det eneste pluginen
+skriver (selvtestrapporten) skrives også her. Modden og skillen
 starter ingen prosesser selv.
 
 Kjernen (kjerne/kjerne.py, kjerne/korriger.py og vokabularfilene) importeres
@@ -24,6 +25,7 @@ whisper-server, når den finnes.
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -129,12 +131,27 @@ class Tjeneste:
         except Exception as e:
             return {"ok": False, "melding": f"Oppsettet kan ikke leses: {e}"}
 
-    def sjekk_mappe(self, sti):
+    def lagre_selvtest(self, rapport, stempel):
+        """Skriver selvtestrapporten (JSON, uten lyd) som selvtest-claude-<stempel>.json i
+        opptaksmappa. Mappa og stien bestemmes her, ikke av modden; et umontert eksternt
+        volum stopper skrivingen i stedet for å gi en mappe på intern disk."""
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{6}", str(stempel)):
+            return {"ok": False, "melding": "Ugyldig tidsstempel for selvtestrapporten."}
         try:
-            self.kjerne.krev_montert(sti)
-            return {"ok": True}
+            data = json.loads(rapport)
+        except (TypeError, json.JSONDecodeError):
+            return {"ok": False, "melding": "Selvtestrapporten er ikke gyldig JSON."}
+        mappe = self.kjerne.standard_opptaksmappe()
+        try:
+            self.kjerne.krev_montert(mappe)
+            mappe.mkdir(parents=True, exist_ok=True)
+            fil = mappe / f"selvtest-claude-{stempel}.json"
+            fil.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         except self.kjerne.KjerneFeil as e:
             return {"ok": False, "melding": str(e)}
+        except OSError as e:
+            return {"ok": False, "melding": f"Kunne ikke skrive selvtestrapporten: {e}"}
+        return {"ok": True, "fil": str(fil)}
 
     def start_kalibrering(self):
         """Starter riggen (127.0.0.1, token i adressen) og åpner den i nettleseren."""
@@ -202,9 +219,9 @@ def lag_server(tjeneste):
     def oppsett() -> dict:
         return tjeneste.oppsett()
 
-    @app.tool(description="Bare for norsk-tale-modden: sjekker at en mappe på et eksternt volum er montert.")
-    def sjekk_mappe(sti: str) -> dict:
-        return tjeneste.sjekk_mappe(sti)
+    @app.tool(description="Bare for norsk-tale-modden: lagrer selvtestrapporten (JSON, uten lyd) i opptaksmappa.")
+    def lagre_selvtest(rapport: str, stempel: str) -> dict:
+        return tjeneste.lagre_selvtest(rapport, stempel)
 
     @app.tool(description="Bare for norsk-tale-modden: starter kalibreringsriggen og åpner den i nettleseren.")
     def start_kalibrering() -> dict:

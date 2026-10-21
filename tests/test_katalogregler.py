@@ -48,3 +48,17 @@ def test_modden_hooker_ingen_nett_mcp_eller_programkall():
 def test_vernets_verktoyhooks_har_matcher():
     for hendelse in ("tool.describe", "tool.check", "tool.call"):
         assert re.search(rf"on\('{re.escape(hendelse)}', \{{ tool: VERNEDE \}}", MODD), hendelse
+
+
+def test_modden_skriver_ingen_filer_og_leser_ingen_miljovariabler():
+    kode = uten_kommentarer_og_strenger(MODD)
+    assert not re.search(r"\$\.fs\.", kode)
+    assert not re.search(r"\$\.env\.", kode)
+
+
+def test_hvert_mcp_kall_har_verktoynavnet_som_fast_tekst():
+    kall = re.findall(r"\$\.mcp\.call\(([^)]*)\)", MODD)
+    assert kall, "fant ingen $.mcp.call"
+    for a in kall:
+        assert re.fullmatch(r"\s*\w+,\s*'[a-z_]+'(,\s*\w+)?\s*", a), a
+
