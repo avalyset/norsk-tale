@@ -19,7 +19,7 @@ _s = importlib.util.spec_from_loader("avvis_opptak", _l)
 avvis = importlib.util.module_from_spec(_s)
 _l.exec_module(avvis)
 
-K = "/Users/x/dev/norsk-tale/scripts/dikter"
+K = "/hjem/x/dev/norsk-tale/scripts/dikter"
 NEKTES = [
     K, K + " --modellvalg large", "./dikter", "cd scripts && ./dikter", "python3 scripts/dikter", "bash scripts/dikter",
     f"bash -c '{K}'", 'sh -c "cd /x && ./dikter"', f"env FOO=1 {K}", f"time {K}", f"nohup {K} &", f"echo hei; {K}",
