@@ -3,7 +3,9 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
-## [Ikke utgitt] – grenen `feat/uten-mod`
+## [0.3.0] – 2026-10-21
+
+**Breaking: mod, MCP-server, snarvei, Angre og selvtest fjernet; diktering via /norsk-tale:dikter.**
 
 Samme diktering uten mod og uten MCP-server, med én vanlig hook (docs/decisions/NTA-0008).
 
@@ -17,6 +19,7 @@ Samme diktering uten mod og uten MCP-server, med én vanlig hook (docs/decisions
 - Innstillingene leses som `${user_config.*}` i skillens kommando, i enkle anførselstegn.
   Uløste plassholdere (innstillingene er ikke lagret) teller som ikke satt, så pluginen
   virker uten oppsett. Kjørt i Claude Code 2.1.303: en lagret `modellvalg` nådde skriptet.
+- Skillen `dikter` ber Claude besvare teksten direkte, uten å lese skill- eller pluginfiler: uten den leste modellen `SKILL.md` etter diktering i tre av tre forsøk (en tillatelsesdialog i auto-modus), med den i null av ett.
 - Skillen `transkriber` bruker `scripts/dikter --fil` i stedet for MCP-verktøyet.
 - README er skrevet om på engelsk. Den gamle README-en er arkivert i
   `docs/README-0.2-mod-og-mcp.md`. PRIVACY og NOTICE er oppdatert.
@@ -26,7 +29,7 @@ Samme diktering uten mod og uten MCP-server, med én vanlig hook (docs/decisions
 - Modden (`hooks/register.tsx`), MCP-serveren (`mcp/`, `.mcp.json`), typekontrakten (`types/`,
   `tsconfig.json`) og testene som hørte til dem. Dermed er også installasjonen av
   MCP-SDK-en fra PyPI borte: pluginen bruker ikke nett.
-- Knappen, hurtigtasten, Angre og `/norsk selvtest`, som trengte modden.
+- Knappen, hurtigtasten, Angre og `/norsk selvtest`, som trengte modden (derfor «Breaking»).
 - Innstillingen `opptak` (bare kalibreringsriggen brukte den, og den startes nå for hånd).
 
 ### Lagt til
@@ -221,6 +224,7 @@ selvtestrapporten får samme innhold og havner samme sted.
 - Målformkrysset (nb mot nn) og de øvrige testsettene (NST, NPSC, NB Samtale) er
   fase 2 og ikke kjørt.
 
+[0.3.0]: https://github.com/avalyset/norsk-tale/releases/tag/v0.3.0
 [0.2.4]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.4
 [0.2.3]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.3
 [0.2.2]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.2

@@ -1,6 +1,6 @@
 # Personvern
 
-Gjelder grenen `feat/uten-mod` (ikke utgitt). Pluginen er her en skill og ett skript,
+Gjelder norsk-tale 0.3.0. Pluginen er her en skill og ett skript,
 uten mod og uten MCP-server, med én vanlig hook som nekter modellen å starte mikrofonen.
 
 ## Kort

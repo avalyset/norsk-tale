@@ -1,6 +1,6 @@
 # Uavklart
 
-Funn som er kjent, men ikke rettet. Rettes senere på `main`, ikke på `feat/uten-mod`.
+Funn som er kjent, men ikke rettet. Rettes senere, ikke i 0.3.0.
 
 - **`tests/test_kjede.py::test_kjede_fra_trykk_til_tekst[0]` (feil i testoppsettet, 2026-10-21):** testen
   forutsetter et opptak med mindre enn 1,5 s stillhet på slutten, slik at kilden slutter før

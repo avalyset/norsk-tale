@@ -1,6 +1,6 @@
 # NTA-0008: Diktering som skill og ett skript, uten mod og MCP-server, med én vanlig hook
 
-*Skrevet 2026-10-21 på grenen `feat/uten-mod`, oppdatert samme dag med målingene i en innlogget økt. Status: implementert på grenen, ikke utgitt.*
+*Skrevet 2026-10-21, oppdatert samme dag med målingene i en innlogget økt. Status: implementert i v0.3.0.*
 
 ## Kontekst
 
