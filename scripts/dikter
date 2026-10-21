@@ -1,0 +1,133 @@
+#!/usr/bin/env -S python3 -I
+"""norsk-tale — én diktering, uten mod, uten server og uten kroker.
+
+Skillen `dikter` kjører dette skriptet med !`…` når brukeren selv skriver
+/norsk-tale:dikter. Skriptet
+
+  1. sjekker oppsettet (ffmpeg, whisper-cli, modellfila; kjernens sjekk, uten nett),
+  2. åpner mikrofonen med ffmpeg og lytter til stillhet etter tale (stillhetsvakten
+     fra lytter/), høyst 90 s, og gir opp etter 10 s uten tale,
+  3. starter én ny whisper-cli-prosess via kjernen (SHA256 av modellen verifiseres
+     der, som før) og
+  4. skriver transkripsjonen, og bare den, til stdout.
+
+Lyden ligger i en midlertidig katalog og slettes ved retur. Skriptet avslutter med
+kode 0 også når det ikke kom tale eller noe feilet: en status begynner da med
+«[norsk-tale]» og skrives til stdout, så skillen kan si fra i stedet for å avbrytes.
+
+Testmodus: --fil <lydfil> hopper over mikrofonen og transkriberer fila.
+"""
+import argparse
+import pathlib
+import shutil
+import subprocess
+import sys
+import tempfile
+import wave
+
+HER = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(HER / "kjerne"))
+sys.path.insert(0, str(HER / "lytter"))
+
+MAKS_S = 90.0         # tak for opptaket, målt fra mikrofonen åpnes
+INGEN_TALE_S = 10.0   # gir opp når det ikke har kommet tale innen så lenge
+PREFIKS = "[norsk-tale]"
+
+MIKROFON_FEIL = ("Ingen mikrofontilgang: macOS leverer bare stillhet. Gi programmet som kjører "
+                 "Claude Code (Terminal, iTerm, Claude) tilgang under Systeminnstillinger → "
+                 "Personvern og sikkerhet → Mikrofon, og start det på nytt.")
+
+
+class Avbrutt(Exception):
+    """En forventet grunn til at det ikke ble noen transkripsjon."""
+
+
+def melding(tekst):
+    print(f"{PREFIKS} {tekst}", flush=True)
+
+
+def ta_opp(ffmpeg, maks_s=MAKS_S, ingen_tale_s=INGEN_TALE_S, lytter=None):
+    """Åpner mikrofonen og returnerer (pcm, grunn): rå 16 kHz mono s16le med tale i,
+    og hvorfor opptaket sluttet («stillhet», «tak» eller «kilden sluttet»).
+    Reiser Avbrutt når det ikke kom tale eller mikrofonen ikke leverer lyd."""
+    lytter = lytter or __import__("norsk_lytter")
+    vakt = lytter.Stillhetsvakt(tak_s=maks_s)
+    proc = subprocess.Popen(lytter.mikrofon_argv(ffmpeg), stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    grunn = None
+    try:
+        while grunn is None:
+            ramme = proc.stdout.read(lytter.RAMME_BYTES)
+            if not ramme:
+                if vakt.har_tale:
+                    grunn = "kilden sluttet"
+                    break
+                hale = proc.stderr.read().decode("utf-8", "replace").strip()
+                raise Avbrutt(f"Mikrofonen leverte ingen lyd: {hale or 'lydstrømmen sluttet før det kom tale'}")
+            grunn = vakt.mat(ramme)
+            if not vakt.har_tale:
+                if vakt.bare_nuller():
+                    raise Avbrutt(MIKROFON_FEIL)
+                if vakt.rammer * lytter.RAMME_MS / 1000 >= ingen_tale_s:
+                    raise Avbrutt(f"Ingen tale hørt på {ingen_tale_s:g} s. Prøv igjen.")
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+    return bytes(vakt.tale), grunn
+
+
+def skriv_wav(pcm, sti, rate=16000):
+    with wave.open(str(sti), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(pcm)
+
+
+def les_argumenter(argv):
+    ap = argparse.ArgumentParser(description="Dikter én melding på norsk (NB-Whisper, lokalt).")
+    for navn in ("modellvalg", "modell", "whisper", "malform"):
+        ap.add_argument(f"--{navn}", default="", help="tom: miljø, så standard (som i kjernen)")
+    ap.add_argument("--fil", help="testmodus: transkriber denne lydfila i stedet for å bruke mikrofonen")
+    ap.add_argument("--maks-s", type=float, default=MAKS_S)
+    ap.add_argument("--ingen-tale-s", type=float, default=INGEN_TALE_S)
+    return ap.parse_args(argv)
+
+
+def hoved(argv=None, kjerne=None, lytter=None):
+    a = les_argumenter(sys.argv[1:] if argv is None else argv)
+    kjerne = kjerne or __import__("kjerne")
+    try:
+        oppsett = kjerne.standard_oppsett(modellvalg=a.modellvalg or None, modell=a.modell or None,
+                                          whisper=a.whisper or None, malform=a.malform or None)
+        rapport = kjerne.sjekk_oppsett(oppsett, verifiser_sha=False)
+        if not rapport["ok"]:
+            raise Avbrutt(rapport["melding"])
+        with tempfile.TemporaryDirectory(prefix="norsk-tale-dikter-") as tmp:
+            if a.fil:
+                lyd = pathlib.Path(a.fil).expanduser()
+            else:
+                ffmpeg = shutil.which("ffmpeg")
+                if not ffmpeg:
+                    raise Avbrutt("Fant ikke ffmpeg på PATH. Installer med: brew install whisper-cpp ffmpeg")
+                pcm, _ = ta_opp(ffmpeg, a.maks_s, a.ingen_tale_s, lytter)
+                lyd = pathlib.Path(tmp) / "opptak.wav"
+                skriv_wav(pcm, lyd)
+            resultat = kjerne.transkriber(lyd, oppsett)
+        tekst = " ".join(resultat["korrigert"].split())
+        if not tekst:
+            raise Avbrutt("Ingen ord ble gjenkjent. Prøv igjen.")
+        print(tekst, flush=True)
+    except Avbrutt as e:
+        melding(str(e))
+    except Exception as e:   # også KjerneFeil: fortsatt kode 0, så skillen kan si fra
+        melding(f"FEIL: {e}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(hoved())
