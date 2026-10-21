@@ -24,7 +24,7 @@ Pluginen har fire deler:
 **Claude kan aldri starte mikrofonen; bare ditt trykk eller din snarvei gjør det.**
 **Nett brukes én gang ved installasjon (MCP-SDK), aldri under bruk.**
 
-Versjon 0.2.3 (2026-10-21), arkivert på Zenodo:
+Versjon 0.2.4 (2026-10-21), arkivert på Zenodo:
 [10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248) (alle versjoner;
 v0.2.2 er [10.5281/zenodo.23474643](https://doi.org/10.5281/zenodo.23474643), v0.2.1 er [10.5281/zenodo.23474554](https://doi.org/10.5281/zenodo.23474554), v0.2.0 er
 [10.5281/zenodo.23474380](https://doi.org/10.5281/zenodo.23474380), v0.1.1 er

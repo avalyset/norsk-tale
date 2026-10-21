@@ -3,6 +3,30 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
+## [0.2.4] – 2026-10-21
+
+Svar på katalogens funn for 0.2.3. Ingen funksjonsendring: koden i modden og serveren er
+uendret.
+
+### Endret
+
+- README har fått én underseksjon per krok i «What this plugin does», med hendelse,
+  matcher og linje slik de står i registreringen, og hva kroken ser, bestemmer og endrer.
+  Et nytt avsnitt, «What the mod sends, and where», viser hva hvert `$.mcp.call` sender,
+  og at det går til pluginens egen lokale MCP-server over stdio.
+- README nevner ikke lenger ikonfilen. Katalogen leste henvisningen som et funn
+  (`UNREAD_ASSET_REFERENCED`). Ikonet står fortsatt i `plugin.json`.
+- `plugin.json`: `keywords` er fjernet, og beskrivelsene av innstillingene `whisper` og
+  `opptak` nevner ikke miljøvariabelen eller PATH. Dette er en hypotese for
+  `MCP_FORWARDS_CREDENTIAL_ENV`: ingen kode leser innloggingsopplysninger, og det
+  eneste navnet i manifestet som ligner et nøkkelord er `keywords`. Forsvinner ikke
+  funnet, kan feltet settes inn igjen.
+
+### Lagt til
+
+- `tests/test_katalogregler.py`: README har en underseksjon for hver krok i
+  `hooks/register.tsx`, med riktig hendelse og linjenummer, og nevner ikke bildefilen.
+
 ## [0.2.3] – 2026-10-21
 
 Svar på funnene fra katalogens automatiske sjekk. Ingen funksjonsendring for brukeren:
@@ -161,6 +185,7 @@ selvtestrapporten får samme innhold og havner samme sted.
 - Målformkrysset (nb mot nn) og de øvrige testsettene (NST, NPSC, NB Samtale) er
   fase 2 og ikke kjørt.
 
+[0.2.4]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.4
 [0.2.3]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.3
 [0.2.2]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.2
 [0.2.1]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.1
