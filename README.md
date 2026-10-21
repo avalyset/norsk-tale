@@ -449,26 +449,99 @@ and to check the self-test, and it never submits the prompt. The MCP server is s
 with a filtered environment: only `PATH`, `HOME`, `TMPDIR`, locale variables, what
 `xdg-open` and Windows need, and `NORSK_TALE_*` reach it. No credentials are read.
 
-**What the hooks see and decide** (`hooks/register.tsx`)
+### What the mod sends, and where
 
-- `tool.describe` (line 436), `tool.check` (line 442) and `tool.call` (line 447) are
-  the microphone guard that stops the model from starting a recording. Each has a
-  matcher (`VERNEDE`, line 194) that selects only this plugin's seven internal tools
-  (`start_opptak`, `stopp_opptak`, `status`, `frigjor`, `oppsett`, `lagre_selvtest`,
-  `start_kalibrering`); every other tool passes by untouched.
-  - `tool.describe` sees the description of those tools when Claude's tool list is built,
-    and replaces it with a hidden, deferred stub, so Claude does not see them.
-  - `tool.check` and `tool.call` see a call to one of them and refuse it unless it
-    comes from this mod (`next.origin.plugin`), so a call made by the model is denied.
-  - Only `transkriber_fil` stays visible to Claude: it transcribes an audio file you
-    point to.
-  - A test (`tests/norsk.test.ts`, "mikrofonvern") fails if the guard is removed.
-- `command.run` (line 413) answers only the plugin's own `/norsk` command.
-- `prompt.submit` (line 454) blocks Enter while the self-test runs so nothing is sent;
-  otherwise it clears the undo state and passes the prompt on unchanged.
-- `ui.render` draws the button row above the prompt and the self-test panel;
-  `session.start` registers the `/norsk` command.
-- There is no hook on `mcp.call`, on network calls or on process calls.
+The mod makes one kind of outgoing call: `$.mcp.call` to the plugin's own MCP server
+(`hooks/register.tsx:228`-`234`; the connection is made at line 212). That server is a
+local process Claude Code starts from `.mcp.json`, and the call goes to it over stdio
+on the same machine. No network is involved. What each call carries:
+
+| Tool | Arguments sent | When |
+|---|---|---|
+| `start_opptak` | none | you press the button or shortcut |
+| `stopp_opptak` | none | you press it again |
+| `status` | the number of the last event seen | every 150 ms while recording |
+| `frigjor` | none | `/norsk av` |
+| `oppsett` | none | `/norsk oppsett` |
+| `lagre_selvtest` | the self-test report (JSON) and a timestamp | the end of `/norsk selvtest` |
+| `start_kalibrering` | none | `/norsk kalibrer` |
+
+Before these calls the mod reads two things: the prompt box (`prompt.read`) and its
+own saved state (`state.get`). Neither is forwarded, with one exception: the
+self-test report holds the text that stood in the prompt box during the test (`TEST: `
+and the sentence you dictated for it), because checking that text is the test. Your own
+draft is never in it, since `/norsk selvtest` refuses to start unless the box is empty.
+No conversation text, earlier prompt or file content is sent anywhere.
+
+### The hooks, one by one
+
+All hooks are registered in `hooks/register.tsx` (listed in `hooks/hooks.json`). Each
+heading gives the event and matcher as written in the registration, and the line.
+
+#### `on('session.start')` (line 403)
+
+- Sees: the session-start event; it uses none of its data.
+- Decides: nothing. It always passes the event on (`next(e)`).
+- Changes: registers the slash command `/norsk` (`$.command.register`, line 404).
+
+#### `on('command.run', { command: 'norsk' })` (line 413)
+
+- Sees: the text typed after `/norsk`. The matcher keeps every other command away.
+- Decides: which of the plugin's own actions to run (`angre`, `av`, `oppsett`,
+  `selvtest`, `selvtest avbryt`, `kalibrer`, or no argument to start or stop
+  dictation), and what text to show you. An unknown argument gets a usage message.
+- Changes: nothing outside its own command. It answers with `{ text }`.
+
+#### `on('tool.describe', { tool: VERNEDE })` (line 436)
+
+- Sees: the name and description of the plugin's seven internal tools, when Claude's
+  tool list is built. The matcher (`VERNEDE`, line 194) keeps every other tool away.
+- Decides: that Claude does not get to see those seven tools.
+- Changes: replaces their description with a short stub and marks them deferred.
+  Nothing else. Only `transkriber_fil` stays visible to Claude.
+
+#### `on('tool.check', { tool: VERNEDE })` (line 442)
+
+- Sees: the name and input of a call to one of the seven tools, and who makes it
+  (`next.origin.plugin`). A call made by the model has the origin `engine`.
+- Decides: denies the call unless it comes from this mod. This is a permission
+  decision, but only for these seven tools. Everything else passes untouched.
+- Changes: nothing. It never rewrites the input.
+
+#### `on('tool.call', { tool: VERNEDE })` (line 447)
+
+- Sees: the same calls as `tool.check`, at the moment they would run.
+- Decides: refuses (`{ deny }`) a call that does not come from this mod, as a second
+  line of defence behind `tool.check`.
+- Changes: nothing.
+
+Together the last three are the microphone guard: Claude can never start a recording;
+only your press or shortcut does. The test "mikrofonvern" in `tests/norsk.test.ts`
+fails if the guard is removed.
+
+#### `on('prompt.submit')` (line 454)
+
+- Sees: the text about to be submitted and whether it is a command.
+- Decides: drops the submission only while the self-test runs, so nothing is sent;
+  otherwise it lets the prompt through.
+- Changes: clears the mod's own undo state. It never edits the prompt text.
+
+#### `on('ui.render', { component: 'Pane', requestId: PANE })` (line 462)
+
+- Sees: the render request for the plugin's own pane, `norsk-selvtest`, and the mod's
+  saved self-test state.
+- Decides: what the self-test panel shows.
+- Changes: draws only that pane.
+
+#### `on('ui.render', { component: 'AbovePrompt' })` (line 473)
+
+- Sees: the render request for the band above the prompt, and the mod's own state. If
+  a survey is showing it passes the request on untouched.
+- Decides: what the button row and status line show.
+- Changes: adds the row with the Norsk, Angre and Avbryt buttons and a status text.
+  It does not touch the prompt or any other part of the interface.
+
+There is no hook on `mcp.call`, on network calls or on process calls.
 
 ## Til katalogens vurderere
 
@@ -512,7 +585,7 @@ Svar på funnene fra katalogens automatiske sjekk, med fil og linje i
   brukeren, ingenting som kjøres: `README.md` (omtale av `curl`),
   `kjerne/kjerne.py:276` (en kommando `/norsk oppsett` viser, men ikke kjører) og
   `tests/test_rigg.py` (en negativkontroll for nettforbudet, uten nedlasting).
-- **Ikon:** `assets/icon.png` er bare et bilde. Ingen kode kjører det.
+- **Ikon:** ikonet i listingen (feltet `icon` i `plugin.json`) er bare et bilde. Ingen kode kjører det.
 - **Legitimasjon:** ingen kode leser innloggingsopplysninger, nøkler eller filer
   med slike, og modden leser ingen miljøvariabler. Serveren leser bare `NORSK_TALE_*`
   og, via operativsystemet, `HOME` og `PATH` for å finne mapper og programmer. Riggen

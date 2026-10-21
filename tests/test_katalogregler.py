@@ -7,6 +7,8 @@ så en regresjon fanges før push:
 - skillen bruker ikke Bash
 - modden hooker ingen nettverks-, MCP- eller programkall, og mikrofonvernets
   verktøyhooks har en matcher som bare velger pluginens egne verktøy
+- README har én underseksjon per krok, med riktig hendelse og linjenummer, og nevner
+  ikke bildefilen (katalogen leser en slik henvisning som et funn)
 """
 import pathlib
 import re
@@ -61,4 +63,20 @@ def test_hvert_mcp_kall_har_verktoynavnet_som_fast_tekst():
     assert kall, "fant ingen $.mcp.call"
     for a in kall:
         assert re.fullmatch(r"\s*\w+,\s*'[a-z_]+'(,\s*\w+)?\s*", a), a
+
+
+README = (ROT / "README.md").read_text(encoding="utf-8")
+
+
+def test_readme_har_en_underseksjon_per_krok_med_riktig_linje():
+    registrert = [(m.group(1), MODD[:m.start()].count("\n") + 1)
+                  for m in re.finditer(r"^[ \t]*on\('([^']+)'", MODD, re.M)]
+    beskrevet = [(m.group(1), int(m.group(2)))
+                 for m in re.finditer(r"^#### `on\('([^']+)'[^`]*`\s*\(line (\d+)\)", README, re.M)]
+    assert registrert, "fant ingen hooks"
+    assert beskrevet == registrert, f"README: {beskrevet}\nkoden:  {registrert}"
+
+
+def test_readme_nevner_ikke_bildefilen():
+    assert not re.search(r"\.png\b|assets/", README)
 
