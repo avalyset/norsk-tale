@@ -9,7 +9,8 @@ The audio never leaves the machine.
 **Version 0.3.1 (2026-11-23).** Since 0.3.0 the plugin is a skill, one script and one plain hook,
 replacing the v0.2.x architecture (a mod, an MCP server and hooks). The v0.2.x README (in
 Norwegian) is archived with v0.2.4 at
-[10.5281/zenodo.23531506](https://doi.org/10.5281/zenodo.23531506). Cite all versions with the
+[10.5281/zenodo.23531506](https://doi.org/10.5281/zenodo.23531506). This version is
+[10.5281/zenodo.24464408](https://doi.org/10.5281/zenodo.24464408); cite all versions with the
 concept DOI [10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248).
 
 The calibration rig is not part of the plugin. Since 0.3.1 it lives in its own repository,
