@@ -34,5 +34,5 @@ Etter start ble kjøringen delt i to (AVVIK nr. 1, [0339421](https://github.com/
 ## Lenker
 
 - OSF-registrering: https://osf.io/rtbkz/ (embargo til 2027-04-19)
-- [kalibrering/AVVIK.md](https://github.com/avalyset/norsk-tale/blob/main/kalibrering/AVVIK.md),
-  [kalibrering/resultater/prereg-v1-fase1.md](https://github.com/avalyset/norsk-tale/blob/main/kalibrering/resultater/prereg-v1-fase1.md)
+- [kalibrering/AVVIK.md](https://github.com/avalyset/norsk-tale-kalibrering/blob/main/kalibrering/AVVIK.md),
+  [kalibrering/resultater/prereg-v1-fase1.md](https://github.com/avalyset/norsk-tale-kalibrering/blob/main/kalibrering/resultater/prereg-v1-fase1.md)

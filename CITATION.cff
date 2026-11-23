@@ -2,13 +2,19 @@ cff-version: 1.2.0
 message: "Hvis du bruker norsk-tale, siter programvaren slik."
 type: software
 title: "norsk-tale: lokal norsk diktering i Claude Code med NB-Whisper og whisper.cpp"
-version: 0.3.0
-date-released: 2026-10-21
+version: 0.3.1
+date-released: 2026-11-23
 doi: 10.5281/zenodo.23473248
 identifiers:
   - type: doi
     value: 10.5281/zenodo.23473248
     description: "Konsept-DOI, alle versjoner"
+  - type: doi
+    value: 10.5281/zenodo.23535840
+    description: "Versjon 0.3.0"
+  - type: doi
+    value: 10.5281/zenodo.23531506
+    description: "Versjon 0.2.4"
   - type: doi
     value: 10.5281/zenodo.23526913
     description: "Versjon 0.2.3"
@@ -69,4 +75,4 @@ references:
       - name: "et al."
     year: 2022
     url: "https://huggingface.co/datasets/google/fleurs"
-    notes: "Testsplitten for nb_no er brukt i standardkalibreringen. CC-BY-4.0."
+    notes: "Testsplitten for nb_no er brukt i standardkalibreringen (https://github.com/avalyset/norsk-tale-kalibrering). CC-BY-4.0."

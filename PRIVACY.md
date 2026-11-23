@@ -1,6 +1,6 @@
 # Personvern
 
-Gjelder norsk-tale 0.3.0. Pluginen er her en skill og ett skript,
+Gjelder norsk-tale 0.3.1. Pluginen er her en skill og ett skript,
 uten mod og uten MCP-server, med én vanlig hook som nekter modellen å starte mikrofonen.
 
 ## Kort
@@ -42,10 +42,6 @@ prompten.
   `settings.json`.
 - Modellen ligger der du har lagt den. Standard er `~/.cache/norsk-tale/`.
 - `scripts/dikter` lagrer ingenting varig: verken lyd, tekst eller logg.
-- Kalibreringsriggen (`kalibrering/rigg.py`, startes for hånd) lagrer opptak (16 kHz wav),
-  transkripsjoner og resultater i opptaksmappa til du sletter dem. Riggen lytter bare på
-  `127.0.0.1`, krever et tilfeldig token og gjør ingen utgående nettverkskall. «Eksporter
-  bidrag» lager en fil med bare tall, uten lyd og uten tekst, og bare når du ber om det.
 
 ## Nedlasting og nett
 

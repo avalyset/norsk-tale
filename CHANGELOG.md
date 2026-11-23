@@ -3,6 +3,28 @@
 Formatet følger [Keep a Changelog](https://keepachangelog.com/no/1.1.0/), og
 versjonene følger semantisk versjonering.
 
+## [0.3.1] – 2026-11-23
+
+Svar på katalogens funn for 0.3.0. Ingen endring i dikteringen, skillene, hooken eller kjernen.
+
+### Fjernet
+
+- Kalibreringsriggen og standardkalibreringen (`kalibrering/`, `selvtest/` og testene deres)
+  er flyttet uendret (bortsett fra én linje i den ufrosne `rigg.py` som leser versjonsnummeret) til https://github.com/avalyset/norsk-tale-kalibrering. Katalogen
+  avviste 0.3.0 fordi `kalibrering/reproduser.py` leser miljøvariabler («Uses a credential
+  from the user's machine»). Variablene er stier, ikke legitimasjon, men fila er frosset i
+  preregistreringen, og riggen er forskningskode som pluginet ikke starter. Den er arkivert
+  med pluginet i Zenodo-versjonene til og med 0.3.0 (10.5281/zenodo.23535840).
+- `docs/README-0.2-mod-og-mcp.md`. README-en for 0.2.x er arkivert med 0.2.4
+  (10.5281/zenodo.23531506).
+
+### Endret
+
+- `tests/test_preregistrering.py` sjekker kjernen mot SHA-ene fra prereg-v1-manifestet, som
+  nå står i testen.
+- README, PRIVACY, NOTICE og CITATION peker på kalibreringsrepoet. CITATION har fått
+  versjons-DOI-ene for 0.2.4 og 0.3.0.
+
 ## [0.3.0] – 2026-10-21
 
 **Breaking: mod, MCP-server, snarvei, Angre og selvtest fjernet; diktering via /norsk-tale:dikter.**
@@ -224,6 +246,7 @@ selvtestrapporten får samme innhold og havner samme sted.
 - Målformkrysset (nb mot nn) og de øvrige testsettene (NST, NPSC, NB Samtale) er
   fase 2 og ikke kjørt.
 
+[0.3.1]: https://github.com/avalyset/norsk-tale/releases/tag/v0.3.1
 [0.3.0]: https://github.com/avalyset/norsk-tale/releases/tag/v0.3.0
 [0.2.4]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.4
 [0.2.3]: https://github.com/avalyset/norsk-tale/releases/tag/v0.2.3

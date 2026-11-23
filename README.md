@@ -6,10 +6,14 @@ and the transcription becomes your prompt. The speech recognition is
 Norway, run with [whisper.cpp](https://github.com/ggml-org/whisper.cpp) on your own machine.
 The audio never leaves the machine.
 
-**Version 0.3.0 (2026-10-21).** This version replaces the v0.2.x architecture (a mod, an MCP server and
-hooks) with a skill, one script and one plain hook. The old README (in Norwegian) is kept in
-[docs/README-0.2-mod-og-mcp.md](docs/README-0.2-mod-og-mcp.md). Cite all versions with the concept DOI
-[10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248).
+**Version 0.3.1 (2026-11-23).** Since 0.3.0 the plugin is a skill, one script and one plain hook,
+replacing the v0.2.x architecture (a mod, an MCP server and hooks). The v0.2.x README (in
+Norwegian) is archived with v0.2.4 at
+[10.5281/zenodo.23531506](https://doi.org/10.5281/zenodo.23531506). Cite all versions with the
+concept DOI [10.5281/zenodo.23473248](https://doi.org/10.5281/zenodo.23473248).
+
+The calibration rig is not part of the plugin. Since 0.3.1 it lives in its own repository,
+[avalyset/norsk-tale-kalibrering](https://github.com/avalyset/norsk-tale-kalibrering); see "Measured quality" below.
 
 **Claude cannot start the microphone. Only you can, by typing the command yourself.**
 **The plugin makes no network calls at all: the model is a file you download yourself.**
@@ -170,8 +174,7 @@ the marker and asks you which form is right.
 - **Whatever is spoken near the microphone ends up in your prompt.** Check the language
   and the content before the prompt is carried out; the skill asks Claude to treat the text
   as yours, so other people's speech counts as yours.
-- Windows and Linux are not tested. The calibration rig (`kalibrering/rigg.py`) is not
-  started by any command in 0.3.0: run `python3 kalibrering/rigg.py` yourself.
+- Windows and Linux are not tested.
 
 ## Measured quality: standard calibration, phase 1
 
@@ -180,12 +183,20 @@ The standard calibration was preregistered before it was run: on OSF as
 Phase 1 was run with the chain as it ships: whisper.cpp with NB-Whisper ggml on Metal,
 beam 5, one process per utterance. The figures are word error rates (WER) in percent with
 95 % confidence intervals, in full in
-[`kalibrering/resultater/prereg-v1-fase1.md`](kalibrering/resultater/prereg-v1-fase1.md).
+[`kalibrering/resultater/prereg-v1-fase1.md`](https://github.com/avalyset/norsk-tale-kalibrering/blob/main/kalibrering/resultater/prereg-v1-fase1.md).
 
-Phase 1 applies to the core at these SHA256 values, unchanged in 0.3.0:
+The calibration rig and the phase 1 code (`kalibrering/`) are research code, not a plugin
+function. Up to 0.3.0 they were in this repository, and they are archived with the plugin in
+the Zenodo versions up to [10.5281/zenodo.23535840](https://doi.org/10.5281/zenodo.23535840)
+(0.3.0) and older. Since 0.3.1 they live in
+[avalyset/norsk-tale-kalibrering](https://github.com/avalyset/norsk-tale-kalibrering), byte-identical
+except for one line in `kalibrering/rigg.py` (not a frozen file) that reads the version number.
+
+Phase 1 applies to the core at these SHA256 values, unchanged in 0.3.1:
 
 - `kjerne/kjerne.py` `962e691c47824a4160bbd8fd208330abac5a7d4fd85ab803bedfaa17fb528a24`
 - `kjerne/korriger.py` `335bc6ac2454ee1744556f411c2f7cf6a44fcd02579b07ba9d201e863752cc68`
+- `kjerne/modeller.json` `72a0de5543db4b1f12917b87aaa1fc151bf1d517972239d0f14c21de60b27289`
 - `kjerne/vokabular/fasit_offentlig.tsv` `fb61815f42d71323fce6680dec388eccf78de68c5d0062c922c07389e4c63ce6`
 - `kjerne/vokabular/offentlig_no.txt` `c6ddfd764ce1b0bb113e94df172e307414990067f3d7f67102ef4236036cb341`
 
@@ -233,11 +244,9 @@ file to play in real time instead of the microphone. Decisions are in
 - NB-Whisper from the National Library of Norway, Apache-2.0. The weights are not included.
   Kummervold et al. (2024), "Whispering in Norwegian: Navigating Orthographic and Dialectic
   Challenges", arXiv:2402.01917.
-- "FLEURS: Few-shot Learning Evaluation of Universal Representations of Speech", Conneau
-  et al., 2022, Google, https://huggingface.co/datasets/google/fleurs, CC-BY-4.0. Only the
-  nb_no test split was used in the standard calibration. No audio or full text is published.
-- NB Tale, NPSC, NST and NB Samtale from Språkbanken at the National Library, CC0. The
-  datasets are not republished.
+- The standard calibration used FLEURS (Conneau et al., 2022, Google, CC-BY-4.0, nb_no test
+  split) and NB Tale, NPSC, NST and NB Samtale from Språkbanken at the National Library
+  (CC0). No audio or full text is published; the credits are in the calibration repository.
 - whisper.cpp by Georgi Gerganov and contributors, MIT.
 
 See [NOTICE](NOTICE).
